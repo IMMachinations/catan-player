@@ -196,7 +196,7 @@ public class CatanBoard {
     private String getVertexDisplay(int vertex) {
         switch (this.vertices[vertex]) {
             case Empty:
-                return Color.WHITE + "o" + Color.RESET;
+                return Color.WHITE + "O" + Color.RESET;
             case P1Settlement:
                 return Color.RED + "S" + Color.RESET;
             case P1City:
@@ -236,18 +236,27 @@ public class CatanBoard {
     }
 
     public void displayBoard() {
-        String out = "      " + getVertexDisplay(0) + "   " + getVertexDisplay(6) + "   " + getVertexDisplay(10);
-        out += "\n     " + displayEdge(5,"/") + " " + displayEdge(0,"\\") + " " + displayEdge(10,"/") + " " + displayEdge(6,"\\") + " " + displayEdge(15, "/") + " " + displayEdge(11,"\\");
-        out += "\n    " + getVertexDisplay(5) + "   " + getVertexDisplay(1) + "   " + getVertexDisplay(7) + "   " + getVertexDisplay(11);
-        out += "\n    " + displayEdge(4,"|") + "   " + displayEdge(1,"|") + "   " + displayEdge(7,"|") + "   " + displayEdge(12,"|");
-        out += "\n    " + getVertexDisplay(4) + "   " + getVertexDisplay(2) + "   " + getVertexDisplay(8) + "   " + getVertexDisplay(12);
-        out += "\n   " + displayEdge(20,"/") + " " + displayEdge(3,"\\") + " " + displayEdge(2,"/") + " " + displayEdge(9,"\\") + " " + displayEdge(8, "/") + " " + displayEdge(14,"\\") + " " + displayEdge(13, "/") + " " + displayEdge(27,"\\");
-        out += "\n  " + getVertexDisplay(17) + "   " + getVertexDisplay(3) + "   " + getVertexDisplay(9) + "   " + getVertexDisplay(13) + "   " + getVertexDisplay(22);
-        out += "\n  " + displayEdge(19,"|") + "   " + displayEdge(16,"|") + "   " + displayEdge(21,"|") + "   " + displayEdge(24,"|") + "   " + displayEdge(28,"|");
-        out += "\n  " + getVertexDisplay(16) + "   " + getVertexDisplay(14) + "   " + getVertexDisplay(18) + "   " + getVertexDisplay(20) + "   " + getVertexDisplay(23);        
-        out += "\n " + displayEdge(35,"/") + " " + displayEdge(18,"\\") + " " + displayEdge(17,"/") + " " + displayEdge(23,"\\") + " " + displayEdge(22, "/") + " " + displayEdge(26,"\\") + " " + displayEdge(25, "/") + " " + displayEdge(30,"\\") + " " + displayEdge(29, "/") + " " + displayEdge(45,"\\");        
-        out += "\n" + getVertexDisplay(28) + "   " + getVertexDisplay(15) + "   " + getVertexDisplay(19) + "   " + getVertexDisplay(21) + "   " + getVertexDisplay(24) + "   " + getVertexDisplay(35);
-        out += "\n" + displayEdge(34,"|") + "   " + displayEdge(31,"|") + "   " + displayEdge(36,"|") + "   " + displayEdge(39,"|") + "   " + displayEdge(42,"|") + "   " + displayEdge(46,"|");
+        String out = "         " + getVertexDisplay(0) + "     " + getVertexDisplay(6) + "     " + getVertexDisplay(10);
+        out += "\n        " + displayEdge(5,"/") + " " + displayEdge(0,"\\") + "   " + displayEdge(10,"/") + " " + displayEdge(6,"\\") + "   " + displayEdge(15, "/") + " " + displayEdge(11,"\\");
+        out += "\n       " + displayEdge(5,"/") + "   " + displayEdge(0,"\\") + " " + displayEdge(10,"/") + "   " + displayEdge(6,"\\") + " " + displayEdge(15, "/") + "   " + displayEdge(11,"\\");
+        out += "\n      " + getVertexDisplay(5) + "     " + getVertexDisplay(1) + "     " + getVertexDisplay(7) + "     " + getVertexDisplay(11);
+        out += "\n      " + displayEdge(4,"|") + "     " + displayEdge(1,"|") + "     " + displayEdge(7,"|") + "     " + displayEdge(12,"|");
+        out += "\n      " + displayEdge(4,"|") + "     " + displayEdge(1,"|") + "     " + displayEdge(7,"|") + "     " + displayEdge(12,"|");
+        out += "\n      " + getVertexDisplay(4) + "     " + getVertexDisplay(2) + "     " + getVertexDisplay(8) + "     " + getVertexDisplay(12);
+        out += "\n     " + displayEdge(20,"/") + " " + displayEdge(3,"\\") + "   " + displayEdge(2,"/") + " " + displayEdge(9,"\\") + "   " + displayEdge(8, "/") + " " + displayEdge(14,"\\") + "   " + displayEdge(13, "/") + " " + displayEdge(27,"\\");
+        out += "\n    " + displayEdge(20,"/") + "   " + displayEdge(3,"\\") + " " + displayEdge(2,"/") + "   " + displayEdge(9,"\\") + " " + displayEdge(8, "/") + "   " + displayEdge(14,"\\") + " " + displayEdge(13, "/") + "   " + displayEdge(27,"\\");
+        
+        out += "\n   " + getVertexDisplay(17) + "     " + getVertexDisplay(3) + "     " + getVertexDisplay(9) + "     " + getVertexDisplay(13) + "     " + getVertexDisplay(22);
+        out += "\n   " + displayEdge(19,"|") + "     " + displayEdge(16,"|") + "     " + displayEdge(21,"|") + "     " + displayEdge(24,"|") + "     " + displayEdge(28,"|");
+        out += "\n   " + displayEdge(19,"|") + "     " + displayEdge(16,"|") + "     " + displayEdge(21,"|") + "     " + displayEdge(24,"|") + "     " + displayEdge(28,"|");
+        
+        out += "\n   " + getVertexDisplay(16) + "     " + getVertexDisplay(14) + "     " + getVertexDisplay(18) + "     " + getVertexDisplay(20) + "     " + getVertexDisplay(23);        
+        out += "\n  " + displayEdge(35,"/") + " " + displayEdge(18,"\\") + "   " + displayEdge(17,"/") + " " + displayEdge(23,"\\") + "   " + displayEdge(22, "/") + " " + displayEdge(26,"\\") + "   " + displayEdge(25, "/") + " " + displayEdge(30,"\\") + "   " + displayEdge(29, "/") + " " + displayEdge(45,"\\");        
+        out += "\n " + displayEdge(35,"/") + "   " + displayEdge(18,"\\") + " " + displayEdge(17,"/") + "   " + displayEdge(23,"\\") + " " + displayEdge(22, "/") + "   " + displayEdge(26,"\\") + " " + displayEdge(25, "/") + "   " + displayEdge(30,"\\") + " " + displayEdge(29, "/") + "   " + displayEdge(45,"\\");
+
+        out += "\n" + getVertexDisplay(28) + "     " + getVertexDisplay(15) + "     " + getVertexDisplay(19) + "     " + getVertexDisplay(21) + "     " + getVertexDisplay(24) + "     " + getVertexDisplay(35);
+        out += "\n" + displayEdge(34,"|") + "     " + displayEdge(31,"|") + "     " + displayEdge(36,"|") + "     " + displayEdge(39,"|") + "     " + displayEdge(42,"|") + "     " + displayEdge(46,"|");
+        out += "\n" + displayEdge(34,"|") + "     " + displayEdge(31,"|") + "     " + displayEdge(36,"|") + "     " + displayEdge(39,"|") + "     " + displayEdge(42,"|") + "     " + displayEdge(46,"|");
         out += "\n" + getVertexDisplay(27) + "   " + getVertexDisplay(25) + "   " + getVertexDisplay(29) + "   " + getVertexDisplay(31) + "   " + getVertexDisplay(33) + "   " + getVertexDisplay(36);
         out += "\n " + displayEdge(33,"\\") + " " + displayEdge(32,"/") + " " + displayEdge(38,"\\") + " " + displayEdge(37,"/") + " " + displayEdge(41, "\\") + " " + displayEdge(40,"/") + " " + displayEdge(44, "\\") + " " + displayEdge(43,"/") + " " + displayEdge(48, "\\") + " " + displayEdge(47,"/"); 
         out += "\n  " + getVertexDisplay(26) + "   " + getVertexDisplay(30) + "   " + getVertexDisplay(32) + "   " + getVertexDisplay(34) + "   " + getVertexDisplay(37);
