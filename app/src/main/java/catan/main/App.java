@@ -24,12 +24,13 @@ public class App {
         CatanPlayer randomPlayer = new SmartRandomPlayer();
         board.placeStartingPositions(new CatanPlayer[]{randomPlayer,randomPlayer,randomPlayer,randomPlayer});
         int currentPlayer = 0;
-        for(int i = 0; i < 1; i++) {
+        for(int i = 0; i < 1000; i++) {
             try {
                 TimeUnit.MILLISECONDS.sleep(200);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            System.out.println("Turn " + i);
             currentPlayer = board.takeTurn(currentPlayer, randomPlayer);
             board.displayBoard();
         }

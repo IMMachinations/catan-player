@@ -25,6 +25,7 @@ public class CatanBoard {
     private VertexState[] vertices;
     private Set<Integer> openVertices;
     private Set<Integer> settlableVertices;
+    private Set<Integer> cityableVertices;
     private EdgeState[] edges;
     private Set<Integer> openEdges;
     private Tile[] tiles;
@@ -33,8 +34,10 @@ public class CatanBoard {
     private int edgeIndex;
 
     private int[][] playerHands;
+    private int[][] bankTradesOffered;
     private int[] resourceCounts;
     private int[] playerScores;
+    private int scoreToWin;
 
     
     public CatanBoard() {
@@ -43,10 +46,12 @@ public class CatanBoard {
         this.vertices = new VertexState[54];
         this.openVertices = new HashSet<>();
         this.settlableVertices = new HashSet<>();
+        this.cityableVertices = new HashSet<>();
         for (int i = 0; i < 54; i++) {
             this.vertices[i] = VertexState.Empty;
             this.openVertices.add(i);
             this.settlableVertices.add(i);
+            this.cityableVertices.add(i);
         }
         this.edges = new EdgeState[72];
         this.openEdges = new HashSet<>();
@@ -69,8 +74,9 @@ public class CatanBoard {
         this.vertexAdjacentTiles = new int[54][3];
         this.playerHands = new int[4][5];
         this.resourceCounts = new int[] {19, 19, 19, 19, 19};
+        this.bankTradesOffered = new int[][] {{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4}};
         this.playerScores = new int[] {0, 0, 0, 0};
-
+        this.scoreToWin = 10;
     }
     
 
@@ -122,10 +128,19 @@ public class CatanBoard {
         }
         if(this.playerHands[catanPlayer][1] > 1 && this.playerHands[catanPlayer][3] > 2) {
             VertexState settlementType = VertexState.settlementFromPlayer(catanPlayer);
-            for(int vertex : this.settlableVertices) {
+            for(int vertex : this.cityableVertices) {
                 if(this.vertices[vertex] == settlementType) {
                     actions.add(new Action(Action.ActionType.BUILD_CITY, new int[] {vertex}));
                     System.out.println("Giving player P" + (catanPlayer + 1) + " option to place city at vertex " + vertex);
+                }
+            }
+        }
+        for(int resource = 0; resource < 5; resource++) {
+            if(this.playerHands[catanPlayer][resource] >= this.bankTradesOffered[catanPlayer][resource]) {
+                for(int remainingResource = 0; remainingResource < 5; remainingResource++) {
+                    if(remainingResource != resource && this.resourceCounts[remainingResource] > 0) {
+                        actions.add(new Action(Action.ActionType.TRADE_WITH_BANK, new int[] {resource, this.bankTradesOffered[catanPlayer][resource], remainingResource}));
+                    }
                 }
             }
         }
@@ -232,6 +247,18 @@ public class CatanBoard {
         return (catanPlayer + 1) % 4;
     }
 
+    public void giveScore(int player) {
+        this.playerScores[player]++;
+        if(this.playerScores[player] >= this.scoreToWin) {
+            endGame(player);
+        }
+    }
+
+    public void endGame(int player) {
+        System.out.println("Player P" + (player + 1) + " wins!");
+        System.exit(0);
+    }
+
     public void executeAction(Action action, int catanPlayer) {
         switch(action.getType()) {
             case BUILD_ROAD:
@@ -245,6 +272,7 @@ public class CatanBoard {
                 this.vertices[action.getArgs()[0]] = VertexState.settlementFromPlayer(catanPlayer);
                 this.openVertices.remove(action.getArgs()[0]);
                 this.settlableVertices.remove(action.getArgs()[0]);
+                this.cityableVertices.add(action.getArgs()[0]);
                 for(int j = 0; j < 3; j++) {
                     this.settlableVertices.remove(AdjacentDicts.vertexAdjacentVertices[action.getArgs()[0]][j]);
                 }
@@ -253,10 +281,21 @@ public class CatanBoard {
                 takeResource(catanPlayer, Resource.WHEAT, 1);
                 takeResource(catanPlayer, Resource.SHEEP, 1);
                 System.out.println("Player P" + (catanPlayer + 1) + " Building settlement at vertex " + action.getArgs()[0]);
+                giveScore(catanPlayer);
                 break;  
             case BUILD_CITY:
                 this.vertices[action.getArgs()[0]] = VertexState.cityFromPlayer(catanPlayer);
+                this.cityableVertices.remove(action.getArgs()[0]);
+                giveScore(catanPlayer);
                 System.out.println("Player P" + (catanPlayer + 1) + " Building city at vertex " + action.getArgs()[0]);
+                break;
+            case TRADE_WITH_BANK:
+                int giveResource = action.getArgs()[0];
+                int amount = action.getArgs()[1];
+                int receiveResource = action.getArgs()[2];
+                takeResource(catanPlayer, Resource.values()[giveResource], amount);
+                giveResource(catanPlayer, Resource.values()[receiveResource], 1);
+                System.out.println("Player P" + (catanPlayer + 1) + " Trading with bank " + amount + " " + Resource.values()[giveResource] + " for " + 1 + " " + Resource.values()[receiveResource]);
                 break;
             case PASS:
                 break;  
@@ -434,10 +473,30 @@ public class CatanBoard {
         out += "\n       " + displayEdge(64,"\\") + "   " + displayEdge(63,"/") + " " + displayEdge(68,"\\") + "   " + displayEdge(67,"/") + " " + displayEdge(71, "\\") + "   " + displayEdge(70,"/");
         out += "\n        " + displayEdge(64,"\\") + " " + displayEdge(63,"/") + "   " + displayEdge(68,"\\") + " " + displayEdge(67,"/") + "   " + displayEdge(71, "\\") + " " + displayEdge(70,"/");
         out += "\n         " + getVertexDisplay(48) + "     " + getVertexDisplay(51) + "     " + getVertexDisplay(53);
-        out += Color.RED + "\n P1: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[0][0] + " " + Resource.WHEAT + " " + this.playerHands[0][1] + " " + Resource.WOOD + " " + this.playerHands[0][2] + " " + Resource.ORE + " " + this.playerHands[0][3] + " " + Resource.SHEEP + " " + this.playerHands[0][4];
-        out += Color.GREEN + "\n P2: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[1][0] + " " + Resource.WHEAT + " " + this.playerHands[1][1] + " " + Resource.WOOD + " " + this.playerHands[1][2] + " " + Resource.ORE + " " + this.playerHands[1][3] + " " + Resource.SHEEP + " " + this.playerHands[1][4];
-        out += Color.YELLOW + "\n P3: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[2][0] + " " + Resource.WHEAT + " " + this.playerHands[2][1] + " " + Resource.WOOD + " " + this.playerHands[2][2] + " " + Resource.ORE + " " + this.playerHands[2][3] + " " + Resource.SHEEP + " " + this.playerHands[2][4];
-        out += Color.BLUE + "\n P4: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[3][0] + " " + Resource.WHEAT + " " + this.playerHands[3][1] + " " + Resource.WOOD + " " + this.playerHands[3][2] + " " + Resource.ORE + " " + this.playerHands[3][3] + " " + Resource.SHEEP + " " + this.playerHands[3][4];
+        out += "\n     " + Resource.BRICK + " " + Resource.WHEAT + " " + 
+               Resource.WOOD + " " + Resource.ORE + " " + Resource.SHEEP + " PTS";
+        
+        out += Color.RED + "\nP1: " + Color.RESET + 
+               String.format("%3d %3d %3d %3d %3d %3d", 
+               this.playerHands[0][0], this.playerHands[0][1], this.playerHands[0][2], 
+               this.playerHands[0][3], this.playerHands[0][4], this.playerScores[0]);
+        
+        out += Color.GREEN + "\nP2: " + Color.RESET + 
+               String.format("%3d %3d %3d %3d %3d %3d", 
+               this.playerHands[1][0], this.playerHands[1][1], this.playerHands[1][2], 
+               this.playerHands[1][3], this.playerHands[1][4], this.playerScores[1]);
+        
+        out += Color.YELLOW + "\nP3: " + Color.RESET + 
+               String.format("%3d %3d %3d %3d %3d %3d", 
+               this.playerHands[2][0], this.playerHands[2][1], this.playerHands[2][2], 
+               this.playerHands[2][3], this.playerHands[2][4], this.playerScores[2]);
+        
+        out += Color.BLUE + "\nP4: " + Color.RESET + 
+               String.format("%3d %3d %3d %3d %3d %3d", 
+               this.playerHands[3][0], this.playerHands[3][1], this.playerHands[3][2], 
+               this.playerHands[3][3], this.playerHands[3][4], this.playerScores[3]);
+        out += "\nBNK:" + String.format("%3d %3d %3d %3d %3d", 
+               this.resourceCounts[0], this.resourceCounts[1], this.resourceCounts[2], this.resourceCounts[3], this.resourceCounts[4]);
         try {
             FileWriter writer = new FileWriter("board.txt");
             writer.write(out);
