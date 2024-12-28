@@ -3,9 +3,11 @@
  */
 package catan.main;
 
+import java.util.concurrent.TimeUnit;
+
 import catan.board.CatanBoard;
 import catan.player.CatanPlayer;
-import catan.player.RandomPlayer;
+import catan.player.SmartRandomPlayer;
 
 public class App {
     
@@ -19,8 +21,19 @@ public class App {
         //board.printBoard();
         //board.displayBoard();
         //board.printAdjacentTilesAndEdges();
-        CatanPlayer player = new RandomPlayer();
-        board.placeStartingPositions(new CatanPlayer[]{player,player,player,player});
-        board.displayBoard();
+        CatanPlayer randomPlayer = new SmartRandomPlayer();
+        board.placeStartingPositions(new CatanPlayer[]{randomPlayer,randomPlayer,randomPlayer,randomPlayer});
+        int currentPlayer = 0;
+        for(int i = 0; i < 1; i++) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            currentPlayer = board.takeTurn(currentPlayer, randomPlayer);
+            board.displayBoard();
+        }
+        
+        board.printAvailableVerticesAndEdges();
     }
 }

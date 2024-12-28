@@ -2,36 +2,57 @@ package catan.board;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import catan.enums.EdgeState;
 import catan.enums.Odds;
 import catan.enums.Resource;
 import catan.enums.VertexState;
+import catan.events.Action;
 import catan.player.CatanPlayer;
+import catan.utils.AdjacentDicts;
 import catan.utils.Color;
 import catan.utils.ResourceGeneration;
 import catan.utils.Tuple;
-import catan.utils.VertexAdjacent;
+
 
 public class CatanBoard {
-    
+    private Random rand;
     private VertexState[] vertices;
+    private Set<Integer> openVertices;
+    private Set<Integer> settlableVertices;
     private EdgeState[] edges;
+    private Set<Integer> openEdges;
     private Tile[] tiles;
     private int[][] vertexAdjacentTiles;
     private int vertexIndex;
     private int edgeIndex;
+
+    private int[][] playerHands;
+    private int[] resourceCounts;
+    private int[] playerScores;
+
+    
     public CatanBoard() {
-        Random rand = new Random();
+
+        rand = new Random();
         this.vertices = new VertexState[54];
+        this.openVertices = new HashSet<>();
+        this.settlableVertices = new HashSet<>();
         for (int i = 0; i < 54; i++) {
             this.vertices[i] = VertexState.Empty;
+            this.openVertices.add(i);
+            this.settlableVertices.add(i);
         }
         this.edges = new EdgeState[72];
+        this.openEdges = new HashSet<>();
         for (int i = 0; i < 72; i++) {
             this.edges[i] = EdgeState.Empty;
+            this.openEdges.add(i);
         }
         //create pairs of odds and resources
         //there should be 2 of each odds (excluding 7, which there should be none of, and 2 and 12, which there should be 1 of)
@@ -46,9 +67,72 @@ public class CatanBoard {
         this.vertexIndex = 0;
         this.edgeIndex = 0;
         this.vertexAdjacentTiles = new int[54][3];
+        this.playerHands = new int[4][5];
+        this.resourceCounts = new int[] {19, 19, 19, 19, 19};
+        this.playerScores = new int[] {0, 0, 0, 0};
 
     }
     
+
+    public int giveResource(int player, Resource resource, int amount) {
+        if(amount <= 0) {
+            return 0;
+        }
+        if(this.resourceCounts[Resource.toInt(resource)] - amount < 0) {
+            return giveResource(player, resource, this.resourceCounts[Resource.toInt(resource)]);
+        }
+        this.resourceCounts[Resource.toInt(resource)] -= amount;
+        this.playerHands[player][Resource.toInt(resource)] += amount;
+        return 0;
+    }
+    public int takeResource(int player, Resource resource, int amount) {
+        if(amount <= 0) {
+            return 0;
+        }
+        if(this.playerHands[player][Resource.toInt(resource)] - amount < 0) {
+            return takeResource(player, resource, this.playerHands[player][Resource.toInt(resource)]);
+        }
+        this.playerHands[player][Resource.toInt(resource)] -= amount;
+        this.resourceCounts[Resource.toInt(resource)] += amount;
+        return 0;
+    }
+
+    public List<Action> getValidActions(int catanPlayer) {
+        List<Action> actions = new ArrayList<>();
+        if(this.playerHands[catanPlayer][0] > 0 && this.playerHands[catanPlayer][2] > 0) {
+            EdgeState roadType = EdgeState.roadFromPlayer(catanPlayer);
+            for(int edge : this.openEdges) {
+                for(int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[edge]) {
+                    if(adjacentEdge != -1 && this.edges[adjacentEdge] == roadType) {
+                        actions.add(new Action(Action.ActionType.BUILD_ROAD, new int[] {edge}));
+                    }
+                }
+            }
+        } 
+        if(this.playerHands[catanPlayer][0] > 0 && this.playerHands[catanPlayer][1] > 0 && this.playerHands[catanPlayer][2] > 0 && this.playerHands[catanPlayer][4] > 0) {
+            EdgeState roadType = EdgeState.roadFromPlayer(catanPlayer);
+            for(int vertex : this.settlableVertices) {
+                for(int adjacentEdge: AdjacentDicts.vertexAdjacentEdges[vertex]) {
+                    if(adjacentEdge != -1 && this.edges[adjacentEdge] == roadType) {
+                        actions.add(new Action(Action.ActionType.BUILD_SETTLEMENT, new int[] {vertex}));
+                        System.out.println("Giving player P" + (catanPlayer + 1) + " option to place settlement at vertex " + vertex);    
+                    }
+                }
+            }
+        }
+        if(this.playerHands[catanPlayer][1] > 1 && this.playerHands[catanPlayer][3] > 2) {
+            VertexState settlementType = VertexState.settlementFromPlayer(catanPlayer);
+            for(int vertex : this.settlableVertices) {
+                if(this.vertices[vertex] == settlementType) {
+                    actions.add(new Action(Action.ActionType.BUILD_CITY, new int[] {vertex}));
+                    System.out.println("Giving player P" + (catanPlayer + 1) + " option to place city at vertex " + vertex);
+                }
+            }
+        }
+        actions.add(new Action(Action.ActionType.PASS, new int[] {}));
+        return actions;
+    }
+
     public void populateBoard() {
         this.tiles[0].populateVerticesAndEdges(new Tile[] {null, null, null, null, null, null}, this);
         this.tiles[1].populateVerticesAndEdges(new Tile[] {null, null, null, null, tiles[0], null}, this);
@@ -99,10 +183,10 @@ public class CatanBoard {
             return false;
         }
         for(int i = 0; i < 3; i++) {
-            if(VertexAdjacent.vertexAdjacentVertices[vertex][i] == -1) {
+            if(AdjacentDicts.vertexAdjacentVertices[vertex][i] == -1) {
                 return true;
             }
-            if(this.vertices[VertexAdjacent.vertexAdjacentVertices[vertex][i]] != VertexState.Empty) {
+            if(this.vertices[AdjacentDicts.vertexAdjacentVertices[vertex][i]] != VertexState.Empty) {
                 return false;
             }        
         }
@@ -111,49 +195,156 @@ public class CatanBoard {
 
     public boolean areAdjacent(int vertex, int edge) {
         for(int i = 0; i < 3; i++) {
-            if(VertexAdjacent.vertexAdjacentEdges[vertex][i] == edge) {
+            if(AdjacentDicts.vertexAdjacentEdges[vertex][i] == edge) {
                 return true;
             }
         }
         return false;
     }
     
+    public Odds rollDice() {
+        int roll1 = rand.nextInt(6);
+        int roll2 = rand.nextInt(6);
+        Odds roll = Odds.values()[roll1 + roll2];
+        if (roll == Odds.SEVEN) {
+            return roll;
+        } 
+        for (int i = 0; i < 19; i++) {
+            if(this.tiles[i].getOdds() == roll) { 
+                for(int j = 0; j < 6; j++) {
+                    int vertexId = this.tiles[i].getVertexId(j);
+                    if(this.vertices[vertexId] != VertexState.Empty) {
+                        VertexState building = this.vertices[vertexId];    
+                        int player = VertexState.getPlayer(building);
+                        giveResource(player, this.tiles[i].getResource(), VertexState.stateToValue(building));
+                    }
+                }
+            }
+        }
+        return roll;
+    }
+
+    public int takeTurn(int catanPlayer, CatanPlayer player) {
+        rollDice();
+        List<Action> actions = getValidActions(catanPlayer);
+        Action action = player.chooseAction(this, actions);
+        executeAction(action, catanPlayer);
+        return (catanPlayer + 1) % 4;
+    }
+
+    public void executeAction(Action action, int catanPlayer) {
+        switch(action.getType()) {
+            case BUILD_ROAD:
+                this.edges[action.getArgs()[0]] = EdgeState.roadFromPlayer(catanPlayer);
+                this.openEdges.remove(action.getArgs()[0]);
+                takeResource(catanPlayer, Resource.BRICK, 1);
+                takeResource(catanPlayer, Resource.WOOD, 1);
+                System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0]);
+                break;
+            case BUILD_SETTLEMENT:
+                this.vertices[action.getArgs()[0]] = VertexState.settlementFromPlayer(catanPlayer);
+                this.openVertices.remove(action.getArgs()[0]);
+                this.settlableVertices.remove(action.getArgs()[0]);
+                for(int j = 0; j < 3; j++) {
+                    this.settlableVertices.remove(AdjacentDicts.vertexAdjacentVertices[action.getArgs()[0]][j]);
+                }
+                takeResource(catanPlayer, Resource.BRICK, 1);
+                takeResource(catanPlayer, Resource.WOOD, 1);
+                takeResource(catanPlayer, Resource.WHEAT, 1);
+                takeResource(catanPlayer, Resource.SHEEP, 1);
+                System.out.println("Player P" + (catanPlayer + 1) + " Building settlement at vertex " + action.getArgs()[0]);
+                break;  
+            case BUILD_CITY:
+                this.vertices[action.getArgs()[0]] = VertexState.cityFromPlayer(catanPlayer);
+                System.out.println("Player P" + (catanPlayer + 1) + " Building city at vertex " + action.getArgs()[0]);
+                break;
+            case PASS:
+                break;  
+        }
+    }
+
     public void placeStartingPositions(CatanPlayer[] players) {
         if(players.length != 4) {
             throw new IllegalArgumentException("Invalid number of players");
         }
-        int[] returnValue;
 
+        // First round - players place first settlement and road
         for(int i = 0; i < 4; i++) {
-            returnValue = players[i].getStartingPosition(this);
-            if(returnValue.length != 2) {
-                throw new IllegalArgumentException("Invalid starting position");
+            System.out.println("Player P" + (i + 1) + " placing first starting position");
+            List<Action> validActions = getValidStartingPositions();
+            Action chosen = players[i].chooseAction(this, validActions);
+            
+            if(chosen.getType() != Action.ActionType.BUILD_SETTLEMENT) {    
+                //how could this happen?
+                throw new IllegalArgumentException("Invalid starting position action");
             }
-            if(!isValidSettlementPlacement(returnValue[0])) {
-                throw new IllegalArgumentException("Invalid starting vertex");
+            
+            // Place settlement and road
+            int vertex = chosen.getArgs()[0];
+            executeAction(chosen, i);
+
+            validActions = new ArrayList<Action> ();
+            for (int edge : AdjacentDicts.vertexAdjacentEdges[vertex]) {
+                if(edge != -1) {
+                    validActions.add(new Action(Action.ActionType.BUILD_ROAD, new int[]{edge}));
+                }
             }
-            if(!areAdjacent(returnValue[0], returnValue[1])) {
-                throw new IllegalArgumentException("Invalid starting edge");
+            chosen = players[i].chooseAction(this, validActions);
+            if(chosen.getType() != Action.ActionType.BUILD_ROAD) {
+                //how could this happen?
+                throw new IllegalArgumentException("Invalid starting position action");
             }
-            this.vertices[returnValue[0]] = VertexState.settlementFromPlayer(i);
-            this.edges[returnValue[1]] = EdgeState.roadFromPlayer(i);   
+            executeAction(chosen, i);
         }
+
+        // Second round - players place second settlement and road (reverse order)
         for(int i = 3; i >= 0; i--) {
-            returnValue = players[i].getStartingPosition(this);
-            if(returnValue.length != 2) {
-                throw new IllegalArgumentException("Invalid starting position");
+            System.out.println("Player P" + (i + 1) + " placing second starting position");
+            List<Action> validActions = getValidStartingPositions();
+            Action chosen = players[i].chooseAction(this, validActions);
+            
+            if(chosen.getType() != Action.ActionType.BUILD_SETTLEMENT) {    
+                //how could this happen?
+                throw new IllegalArgumentException("Invalid starting position action");
             }
-            if(!isValidSettlementPlacement(returnValue[0])) {
-                throw new IllegalArgumentException("Invalid starting vertex");
+            
+            // Place settlement and road
+            int vertex = chosen.getArgs()[0];
+            executeAction(chosen, i);
+
+            for(int j = 0; j < 3; j++) {
+                if(AdjacentDicts.vertexAdjacentTiles[vertex][j] != -1 && this.tiles[AdjacentDicts.vertexAdjacentTiles[vertex][j]].getOdds() != Odds.SEVEN) {
+                    giveResource(i, this.tiles[AdjacentDicts.vertexAdjacentTiles[vertex][j]].getResource(), 1);
+                }
             }
-            if(!areAdjacent(returnValue[0], returnValue[1])) {
-                throw new IllegalArgumentException("Invalid starting edge");
+
+            validActions = new ArrayList<Action> ();
+            for (int edge : AdjacentDicts.vertexAdjacentEdges[vertex]) {
+                if(edge != -1) {
+                    validActions.add(new Action(Action.ActionType.BUILD_ROAD, new int[]{edge}));
+                }
             }
-            this.vertices[returnValue[0]] = VertexState.settlementFromPlayer(i);
-            this.edges[returnValue[1]] = EdgeState.roadFromPlayer(i);   
+            chosen = players[i].chooseAction(this, validActions);
+            if(chosen.getType() != Action.ActionType.BUILD_ROAD) {
+                //how could this happen?
+                throw new IllegalArgumentException("Invalid starting position action");
+            }
+            executeAction(chosen, i);
         }
-        
     }
+
+    // Helper method to get valid starting positions
+    private List<Action> getValidStartingPositions() {
+        List<Action> actions = new ArrayList<>();
+        
+        // For each valid settlement location
+        for(int vertex : this.settlableVertices) {
+            actions.add(new Action(Action.ActionType.BUILD_SETTLEMENT, new int[]{vertex}));
+        }
+        return actions;
+    }
+
+    
 
     public void printBoard() {
         for(int i = 0; i < 19; i++) {
@@ -243,6 +434,10 @@ public class CatanBoard {
         out += "\n       " + displayEdge(64,"\\") + "   " + displayEdge(63,"/") + " " + displayEdge(68,"\\") + "   " + displayEdge(67,"/") + " " + displayEdge(71, "\\") + "   " + displayEdge(70,"/");
         out += "\n        " + displayEdge(64,"\\") + " " + displayEdge(63,"/") + "   " + displayEdge(68,"\\") + " " + displayEdge(67,"/") + "   " + displayEdge(71, "\\") + " " + displayEdge(70,"/");
         out += "\n         " + getVertexDisplay(48) + "     " + getVertexDisplay(51) + "     " + getVertexDisplay(53);
+        out += Color.RED + "\n P1: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[0][0] + " " + Resource.WHEAT + " " + this.playerHands[0][1] + " " + Resource.WOOD + " " + this.playerHands[0][2] + " " + Resource.ORE + " " + this.playerHands[0][3] + " " + Resource.SHEEP + " " + this.playerHands[0][4];
+        out += Color.GREEN + "\n P2: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[1][0] + " " + Resource.WHEAT + " " + this.playerHands[1][1] + " " + Resource.WOOD + " " + this.playerHands[1][2] + " " + Resource.ORE + " " + this.playerHands[1][3] + " " + Resource.SHEEP + " " + this.playerHands[1][4];
+        out += Color.YELLOW + "\n P3: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[2][0] + " " + Resource.WHEAT + " " + this.playerHands[2][1] + " " + Resource.WOOD + " " + this.playerHands[2][2] + " " + Resource.ORE + " " + this.playerHands[2][3] + " " + Resource.SHEEP + " " + this.playerHands[2][4];
+        out += Color.BLUE + "\n P4: " + Color.RESET + Resource.BRICK  + " " + this.playerHands[3][0] + " " + Resource.WHEAT + " " + this.playerHands[3][1] + " " + Resource.WOOD + " " + this.playerHands[3][2] + " " + Resource.ORE + " " + this.playerHands[3][3] + " " + Resource.SHEEP + " " + this.playerHands[3][4];
         try {
             FileWriter writer = new FileWriter("board.txt");
             writer.write(out);
@@ -262,5 +457,10 @@ public class CatanBoard {
             }
         }
     }
+    
+    public void printAvailableVerticesAndEdges() {
+        System.out.println("Available Vertices: " + this.settlableVertices);
+        System.out.println("Available Edges: " + this.openEdges);
+    }   
 
 }

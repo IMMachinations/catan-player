@@ -43,6 +43,23 @@ public enum VertexState {
         }
     }
 
+    public static int stateToValue(VertexState state) {
+        switch(state) {
+            case P1Settlement:
+            case P2Settlement:
+            case P3Settlement:
+            case P4Settlement:
+                return 1;
+            case P1City:
+            case P2City:
+            case P3City:
+            case P4City:
+                return 2;
+            default:
+                return 0;   
+        }
+    }
+
     public static VertexState settlementFromPlayer(int player) {
         if (player < 0 || player > 3) {
             throw new IllegalArgumentException("Player must be between 0 and 3");

@@ -21,4 +21,15 @@ public enum Resource {
     }
     public static final Resource[] resources = {BRICK, WHEAT, WOOD, ORE, SHEEP, NONE};
     public static final Resource[] standardResources = {BRICK, BRICK, BRICK, WHEAT, WHEAT, WHEAT, WHEAT, WOOD, WOOD, WOOD, WOOD, ORE, ORE, ORE, SHEEP, SHEEP, SHEEP, SHEEP};
+    public static final int[] resourceCounts = {19, 19, 19, 19, 19};
+    public static final int toInt(Resource resource) {
+        switch(resource) {
+            case BRICK: return 0;
+            case WHEAT: return 1;
+            case WOOD: return 2;
+            case ORE: return 3;
+            case SHEEP: return 4;
+            default: return -1;
+        }
+    }   
 }
