@@ -34,7 +34,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "catan.player.App"
+    mainClass = "catan.main.App"
 }
 
 tasks.named<Test>("test") {

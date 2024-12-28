@@ -2,6 +2,7 @@ package catan.board;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 
 import catan.enums.EdgeState;
@@ -10,6 +11,8 @@ import catan.enums.Resource;
 import catan.enums.VertexState;
 import catan.player.CatanPlayer;
 import catan.utils.Color;
+import catan.utils.ResourceGeneration;
+import catan.utils.Tuple;
 import catan.utils.VertexAdjacent;
 
 public class CatanBoard {
@@ -30,9 +33,15 @@ public class CatanBoard {
         for (int i = 0; i < 72; i++) {
             this.edges[i] = EdgeState.Empty;
         }
+        //create pairs of odds and resources
+        //there should be 2 of each odds (excluding 7, which there should be none of, and 2 and 12, which there should be 1 of)
+        //there should be 3 of each resource (excluding 6, which there should be none of)
+
+        List<Tuple<Odds, Resource>> tileResourcesOdds = ResourceGeneration.generateResources();
+        
         this.tiles = new Tile[19];
         for (int i = 0; i < 19; i++) {
-            this.tiles[i] = new Tile(Resource.values()[rand.nextInt(6)], Odds.values()[rand.nextInt(10)], i);
+            this.tiles[i] = new Tile(tileResourcesOdds.get(i).y, tileResourcesOdds.get(i).x, i);
         }
         this.vertexIndex = 0;
         this.edgeIndex = 0;
@@ -200,14 +209,14 @@ public class CatanBoard {
         out += "\n       " + displayEdge(5,"/") + "   " + displayEdge(0,"\\") + " " + displayEdge(10,"/") + "   " + displayEdge(6,"\\") + " " + displayEdge(15, "/") + "   " + displayEdge(11,"\\");
         out += "\n      " + getVertexDisplay(5) + "     " + getVertexDisplay(1) + "     " + getVertexDisplay(7) + "     " + getVertexDisplay(11);
         out += "\n      " + displayEdge(4,"|") + " " + tiles[0].getOdds() + " " + displayEdge(1,"|") + " " + tiles[1].getOdds() + " " + displayEdge(7,"|") + " " + tiles[2].getOdds() + " " + displayEdge(12,"|");
-        out += "\n      " + displayEdge(4,"|") + "  " + tiles[0].getResource() + "  " + displayEdge(1,"|") + "  " + tiles[1].getResource() + "  " + displayEdge(7,"|") + "  " + tiles[2].getResource() + "  " + displayEdge(12,"|");
+        out += "\n      " + displayEdge(4,"|") + " " + tiles[0].getResource() + " " + displayEdge(1,"|") + " " + tiles[1].getResource() + " " + displayEdge(7,"|") + " " + tiles[2].getResource() + " " + displayEdge(12,"|");
         out += "\n      " + getVertexDisplay(4) + "     " + getVertexDisplay(2) + "     " + getVertexDisplay(8) + "     " + getVertexDisplay(12);
         out += "\n     " + displayEdge(20,"/") + " " + displayEdge(3,"\\") + "   " + displayEdge(2,"/") + " " + displayEdge(9,"\\") + "   " + displayEdge(8, "/") + " " + displayEdge(14,"\\") + "   " + displayEdge(13, "/") + " " + displayEdge(27,"\\");
         out += "\n    " + displayEdge(20,"/") + "   " + displayEdge(3,"\\") + " " + displayEdge(2,"/") + "   " + displayEdge(9,"\\") + " " + displayEdge(8, "/") + "   " + displayEdge(14,"\\") + " " + displayEdge(13, "/") + "   " + displayEdge(27,"\\");
         
         out += "\n   " + getVertexDisplay(17) + "     " + getVertexDisplay(3) + "     " + getVertexDisplay(9) + "     " + getVertexDisplay(13) + "     " + getVertexDisplay(22);
         out += "\n   " + displayEdge(19,"|") + " " + tiles[3].getOdds() + " " + displayEdge(16,"|") + " " + tiles[4].getOdds() + " " + displayEdge(21,"|") + " " + tiles[5].getOdds() + " " + displayEdge(24,"|") + " " + tiles[6].getOdds() + " " + displayEdge(28,"|");
-        out += "\n   " + displayEdge(19,"|") + "  " + tiles[3].getResource() + "  " + displayEdge(16,"|") + "  " + tiles[4].getResource() + "  " + displayEdge(21,"|") + "  " + tiles[5].getResource() + "  " + displayEdge(24,"|") + "  " + tiles[6].getResource() + "  " + displayEdge(28,"|");
+        out += "\n   " + displayEdge(19,"|") + " " + tiles[3].getResource() + " " + displayEdge(16,"|") + " " + tiles[4].getResource() + " " + displayEdge(21,"|") + " " + tiles[5].getResource() + " " + displayEdge(24,"|") + " " + tiles[6].getResource() + " " + displayEdge(28,"|");
         
         out += "\n   " + getVertexDisplay(16) + "     " + getVertexDisplay(14) + "     " + getVertexDisplay(18) + "     " + getVertexDisplay(20) + "     " + getVertexDisplay(23);        
         out += "\n  " + displayEdge(35,"/") + " " + displayEdge(18,"\\") + "   " + displayEdge(17,"/") + " " + displayEdge(23,"\\") + "   " + displayEdge(22, "/") + " " + displayEdge(26,"\\") + "   " + displayEdge(25, "/") + " " + displayEdge(30,"\\") + "   " + displayEdge(29, "/") + " " + displayEdge(45,"\\");        
@@ -215,21 +224,21 @@ public class CatanBoard {
 
         out += "\n" + getVertexDisplay(28) + "     " + getVertexDisplay(15) + "     " + getVertexDisplay(19) + "     " + getVertexDisplay(21) + "     " + getVertexDisplay(24) + "     " + getVertexDisplay(35);
         out += "\n" + displayEdge(34,"|") + " " + tiles[7].getOdds() + " " + displayEdge(31,"|") + " " + tiles[8].getOdds() + " " + displayEdge(36,"|") + " " + tiles[9].getOdds() + " " + displayEdge(39,"|") + " " + tiles[10].getOdds() + " " + displayEdge(42,"|") + " " + tiles[11].getOdds() + " " + displayEdge(46,"|");
-        out += "\n" + displayEdge(34,"|") + "  " + tiles[7].getResource() + "  " + displayEdge(31,"|") + "  " + tiles[8].getResource() + "  " + displayEdge(36,"|") + "  " + tiles[9].getResource() + "  " + displayEdge(39,"|") + "  " + tiles[10].getResource() + "  " + displayEdge(42,"|") + "  " + tiles[11].getResource() + "  " + displayEdge(46,"|");
+        out += "\n" + displayEdge(34,"|") + " " + tiles[7].getResource() + " " + displayEdge(31,"|") + " " + tiles[8].getResource() + " " + displayEdge(36,"|") + " " + tiles[9].getResource() + " " + displayEdge(39,"|") + " " + tiles[10].getResource() + " " + displayEdge(42,"|") + " " + tiles[11].getResource() + " " + displayEdge(46,"|");
         out += "\n" + getVertexDisplay(27) + "     " + getVertexDisplay(25) + "     " + getVertexDisplay(29) + "     " + getVertexDisplay(31) + "     " + getVertexDisplay(33) + "     " + getVertexDisplay(36);
         out += "\n " + displayEdge(33,"\\") + "   " + displayEdge(32,"/") + " " + displayEdge(38,"\\") + "   " + displayEdge(37,"/") + " " + displayEdge(41, "\\") + "   " + displayEdge(40,"/") + " " + displayEdge(44, "\\") + "   " + displayEdge(43,"/") + " " + displayEdge(48, "\\") + "   " + displayEdge(47,"/");
         out += "\n  " + displayEdge(33,"\\") + " " + displayEdge(32,"/") + "   " + displayEdge(38,"\\") + " " + displayEdge(37,"/") + "   " + displayEdge(41, "\\") + " " + displayEdge(40,"/") + "   " + displayEdge(44, "\\") + " " + displayEdge(43,"/") + "   " + displayEdge(48, "\\") + " " + displayEdge(47,"/"); 
         
         out += "\n   " + getVertexDisplay(26) + "     " + getVertexDisplay(30) + "     " + getVertexDisplay(32) + "     " + getVertexDisplay(34) + "     " + getVertexDisplay(37);
         out += "\n   " + displayEdge(52,"|") + " " + tiles[12].getOdds() + " " + displayEdge(49,"|") + " " + tiles[13].getOdds() + " " + displayEdge(53,"|") + " " + tiles[14].getOdds() + " " + displayEdge(56,"|") + " " + tiles[15].getOdds() + " " + displayEdge(59,"|");
-        out += "\n   " + displayEdge(52,"|") + "  " + tiles[12].getResource() + "  " + displayEdge(49,"|") + "  " + tiles[13].getResource() + "  " + displayEdge(53,"|") + "  " + tiles[14].getResource() + "  " + displayEdge(56,"|") + "  " + tiles[15].getResource() + "  " + displayEdge(59,"|");
+        out += "\n   " + displayEdge(52,"|") + " " + tiles[12].getResource() + " " + displayEdge(49,"|") + " " + tiles[13].getResource() + " " + displayEdge(53,"|") + " " + tiles[14].getResource() + " " + displayEdge(56,"|") + " " + tiles[15].getResource() + " " + displayEdge(59,"|");
         out += "\n   " + getVertexDisplay(40) + "     " + getVertexDisplay(38) + "     " + getVertexDisplay(41) + "     " + getVertexDisplay(43) + "     " + getVertexDisplay(45);
         
         out += "\n    " + displayEdge(51,"\\") + "   " + displayEdge(50,"/") + " " + displayEdge(55,"\\") + "   " + displayEdge(54,"/") + " " + displayEdge(58, "\\") + "   " + displayEdge(57,"/") + " " + displayEdge(61, "\\") + "   " + displayEdge(60,"/");
         out += "\n     " + displayEdge(51,"\\") + " " + displayEdge(50,"/") + "   " + displayEdge(55,"\\") + " " + displayEdge(54,"/") + "   " + displayEdge(58, "\\") + " " + displayEdge(57,"/") + "   " + displayEdge(61, "\\") + " " + displayEdge(60,"/");
         out += "\n      " + getVertexDisplay(39) + "     " + getVertexDisplay(42) + "     " + getVertexDisplay(44) + "     " + getVertexDisplay(46);
         out += "\n      " + displayEdge(65,"|") + " " + tiles[16].getOdds() + " " + displayEdge(62,"|") + " " + tiles[17].getOdds() + " " + displayEdge(66,"|") + " " + tiles[18].getOdds() + " " + displayEdge(69,"|");
-        out += "\n      " + displayEdge(65,"|") + "  " + tiles[16].getResource() + "  " + displayEdge(62,"|") + "  " + tiles[17].getResource() + "  " + displayEdge(66,"|") + "  " + tiles[18].getResource() + "  " + displayEdge(69,"|");
+        out += "\n      " + displayEdge(65,"|") + " " + tiles[16].getResource() + " " + displayEdge(62,"|") + " " + tiles[17].getResource() + " " + displayEdge(66,"|") + " " + tiles[18].getResource() + " " + displayEdge(69,"|");
         out += "\n      " + getVertexDisplay(49) + "     " + getVertexDisplay(47) + "     " + getVertexDisplay(50) + "     " + getVertexDisplay(52);
         out += "\n       " + displayEdge(64,"\\") + "   " + displayEdge(63,"/") + " " + displayEdge(68,"\\") + "   " + displayEdge(67,"/") + " " + displayEdge(71, "\\") + "   " + displayEdge(70,"/");
         out += "\n        " + displayEdge(64,"\\") + " " + displayEdge(63,"/") + "   " + displayEdge(68,"\\") + " " + displayEdge(67,"/") + "   " + displayEdge(71, "\\") + " " + displayEdge(70,"/");

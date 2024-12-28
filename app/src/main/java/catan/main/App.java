@@ -5,7 +5,7 @@ package catan.main;
 
 import catan.board.CatanBoard;
 import catan.player.CatanPlayer;
-import catan.player.FunnyPlayer;
+import catan.player.RandomPlayer;
 
 public class App {
     
@@ -19,8 +19,7 @@ public class App {
         //board.printBoard();
         //board.displayBoard();
         //board.printAdjacentTilesAndEdges();
-        CatanPlayer player = new FunnyPlayer();
-        //CatanPlayer player = new RandomPlayer();
+        CatanPlayer player = new RandomPlayer();
         board.placeStartingPositions(new CatanPlayer[]{player,player,player,player});
         board.displayBoard();
     }

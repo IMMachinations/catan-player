@@ -6,6 +6,7 @@ public enum Odds {
     FOUR,
     FIVE,
     SIX,
+    SEVEN,
     EIGHT,
     NINE,
     TEN,
@@ -19,6 +20,7 @@ public enum Odds {
             case FOUR: return " 4 ";
             case FIVE: return " 5 ";
             case SIX: return " 6 ";
+            case SEVEN: return " 7 ";
             case EIGHT: return " 8 ";
             case NINE: return " 9 ";
             case TEN: return "1 0";
@@ -27,5 +29,6 @@ public enum Odds {
             default: return "   ";
         }
     }
-    public static final Odds[] odds = {TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, ELEVEN, TWELVE};
+    public static final Odds[] odds = {TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, ELEVEN, TWELVE};
+    public static final Odds[] standardOdds = {TWO, THREE, THREE, FOUR, FOUR, FIVE, FIVE, SIX, SIX, EIGHT, EIGHT, NINE, NINE, TEN, TEN, ELEVEN, ELEVEN, TWELVE};
 }
