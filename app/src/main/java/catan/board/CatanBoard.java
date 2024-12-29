@@ -11,9 +11,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-
-import com.sun.source.doctree.ThrowsTree;
-
 import catan.enums.EdgeState;
 import catan.enums.Odds;
 import catan.enums.Resource;
@@ -24,36 +21,59 @@ import catan.utils.AdjacentDicts;
 import catan.utils.Color;
 import catan.utils.ResourceGeneration;
 import catan.utils.Tuple;
-
+import catan.utils.StringUtils;
 
 public class CatanBoard {
-    private Random rand;
+    // Board structure
+    private Tile[] tiles;
     private VertexState[] vertices;
+    private EdgeState[] edges;
+    
+    // Board state tracking
     private Set<Integer> openVertices;
     private Set<Integer> settlableVertices;
     private Set<Integer> cityableVertices;
-    private EdgeState[] edges;
     private Set<Integer> openEdges;
-    private Tile[] tiles;
-    private int[][] vertexAdjacentTiles;
     private int vertexIndex;
     private int edgeIndex;
-
-    private int[][] playerHands;
-    private int[][] bankTradesOffered;
-    private int[][] developmentCardsInHand;
+    
+    // Player resources and trades
+    private int[][] playerHands;          // [player][resource]
+    private int[] resourceCounts;         // Bank's resource counts
+    private int[][] bankTradesOffered;    // [player][resource]
+    
+    // Development cards
+    private int[][] developmentCardsInHand;    // [player][cardType]
     private Queue<Integer> developmentCardsInDeck;
     private boolean[][] canPlayDevelopmentCardTypeThisTurn;
-    private int[] resourceCounts;
-    private int[] playerScores;
-    private int scoreToWin;
-    private CatanPlayer[] players;
-    private int[] knightsPlayed;
     
-    public CatanBoard() {
+    // Player state
+    private int[] playerScores;
+    private int[] buildableRoads;
+    private int[] buildableSettlements;
+    private int[] buildableCities;
+    private int[] knightsPlayed;
+    private int[] roadLengths;
+    private CatanPlayer[] players;
+    
+    // Game state
+    private Random rand;
+    private int scoreToWin;
+    private int largestArmyPlayer;
+    private int longestRoadPlayer;
 
-        rand = new Random();
+    public CatanBoard() {
+        // Board structure initialization
+        this.tiles = new Tile[19];
+        List<Tuple<Odds, Resource>> tileResourcesOdds = ResourceGeneration.generateResources();       
+        for (int i = 0; i < 19; i++) {
+            this.tiles[i] = new Tile(tileResourcesOdds.get(i).y, tileResourcesOdds.get(i).x, i);
+        }
+
         this.vertices = new VertexState[54];
+        this.edges = new EdgeState[72];
+
+        // Board state tracking initialization
         this.openVertices = new HashSet<>();
         this.settlableVertices = new HashSet<>();
         this.cityableVertices = new HashSet<>();
@@ -63,38 +83,53 @@ public class CatanBoard {
             this.settlableVertices.add(i);
             this.cityableVertices.add(i);
         }
-        this.edges = new EdgeState[72];
+
         this.openEdges = new HashSet<>();
         for (int i = 0; i < 72; i++) {
             this.edges[i] = EdgeState.Empty;
             this.openEdges.add(i);
         }
-        //create pairs of odds and resources
-        //there should be 2 of each odds (excluding 7, which there should be none of, and 2 and 12, which there should be 1 of)
-        //there should be 3 of each resource (excluding 6, which there should be none of)
-
-        List<Tuple<Odds, Resource>> tileResourcesOdds = ResourceGeneration.generateResources();
-        
-        this.tiles = new Tile[19];
-        for (int i = 0; i < 19; i++) {
-            this.tiles[i] = new Tile(tileResourcesOdds.get(i).y, tileResourcesOdds.get(i).x, i);
-        }
         this.vertexIndex = 0;
         this.edgeIndex = 0;
-        this.vertexAdjacentTiles = new int[54][3];
+
+        // Player resources and trades initialization
         this.playerHands = new int[4][5];
         this.resourceCounts = new int[] {19, 19, 19, 19, 19};
-        this.bankTradesOffered = new int[][] {{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4}};
+        this.bankTradesOffered = new int[][] {
+            {4, 4, 4, 4, 4},
+            {4, 4, 4, 4, 4},
+            {4, 4, 4, 4, 4},
+            {4, 4, 4, 4, 4}
+        };
+
+        // Development cards initialization
         this.developmentCardsInHand = new int[4][5];
         //0: knight, 1: road building, 2: year of plenty, 3: monopoly 4: victory point
-        ArrayList storeList = new ArrayList<>(Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 4)); 
+        ArrayList storeList = new ArrayList<>(Arrays.asList(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 14 knights
+            1, 1,                                        // 2 road building
+            2, 2,                                        // 2 year of plenty
+            3, 3,                                        // 2 monopoly
+            4, 4, 4, 4, 4                               // 5 victory points
+        )); 
         Collections.shuffle(storeList);
         this.developmentCardsInDeck = new LinkedList<>(storeList); 
         this.canPlayDevelopmentCardTypeThisTurn = new boolean[4][4];
-        this.playerScores = new int[] {0, 0, 0, 0};
-        this.scoreToWin = 10;
-        this.players = new CatanPlayer[4];
+
+        // Player state initialization
+        this.playerScores = new int[4];
+        this.buildableRoads = new int[] {15, 15, 15, 15};
+        this.buildableSettlements = new int[] {5, 5, 5, 5};
+        this.buildableCities = new int[] {4, 4, 4, 4};
         this.knightsPlayed = new int[4];
+        this.roadLengths = new int[4];
+        this.players = new CatanPlayer[4];
+
+        // Game state initialization
+        rand = new Random();
+        this.scoreToWin = 10;
+        this.largestArmyPlayer = -1;
+        this.longestRoadPlayer = -1;
     }
     
 
@@ -123,7 +158,7 @@ public class CatanBoard {
 
     public List<Action> getValidActions(int catanPlayer) {
         List<Action> actions = new ArrayList<>();
-        if(this.playerHands[catanPlayer][0] > 0 && this.playerHands[catanPlayer][2] > 0) {
+        if(this.buildableRoads[catanPlayer] > 0 && this.playerHands[catanPlayer][0] > 0 && this.playerHands[catanPlayer][2] > 0) {
             EdgeState roadType = EdgeState.roadFromPlayer(catanPlayer);
             for(int edge : this.openEdges) {
                 for(int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[edge]) {
@@ -133,7 +168,7 @@ public class CatanBoard {
                 }
             }
         } 
-        if(this.playerHands[catanPlayer][0] > 0 && this.playerHands[catanPlayer][1] > 0 && this.playerHands[catanPlayer][2] > 0 && this.playerHands[catanPlayer][4] > 0) {
+        if(this.buildableSettlements[catanPlayer] > 0 && this.playerHands[catanPlayer][0] > 0 && this.playerHands[catanPlayer][1] > 0 && this.playerHands[catanPlayer][2] > 0 && this.playerHands[catanPlayer][4] > 0) {
             EdgeState roadType = EdgeState.roadFromPlayer(catanPlayer);
             for(int vertex : this.settlableVertices) {
                 for(int adjacentEdge: AdjacentDicts.vertexAdjacentEdges[vertex]) {
@@ -144,7 +179,7 @@ public class CatanBoard {
                 }
             }
         }
-        if(this.playerHands[catanPlayer][1] > 1 && this.playerHands[catanPlayer][3] > 2) {
+        if(this.buildableCities[catanPlayer] > 0 && this.playerHands[catanPlayer][1] > 1 && this.playerHands[catanPlayer][3] > 2) {
             VertexState settlementType = VertexState.settlementFromPlayer(catanPlayer);
             for(int vertex : this.cityableVertices) {
                 if(this.vertices[vertex] == settlementType) {
@@ -172,7 +207,7 @@ public class CatanBoard {
                 }
             }
         }
-        if(this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][1]) {
+        if(this.buildableRoads[catanPlayer] > 1 && this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][1]) {
             Set<Integer> placableRoads = getPlacableRoads(catanPlayer);
             for(int road : placableRoads) {
                 for(int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[road]) {
@@ -287,7 +322,7 @@ public class CatanBoard {
         }
         return placableRoads;
     }
-
+    
     public void moveResourceFromPlayerToPlayer(int givePlayer, int receivePlayer, int amount, Resource resource) {
         if(this.playerHands[givePlayer][Resource.toInt(resource)] - amount < 0) {
             throw new IllegalArgumentException("Not enough resources to move");
@@ -372,6 +407,87 @@ public class CatanBoard {
             endGame(player);
         }
     }
+    public void takeScore(int player) {
+        this.playerScores[player]--;
+        if(this.playerScores[player] < 2) {
+            throw new IllegalArgumentException("Player has less than 2 points");
+        }
+    }
+
+    public boolean checkLargestArmy(int player) {
+        if(this.knightsPlayed[player] >= 3) {
+            if(this.largestArmyPlayer == -1) { return true;}
+            if(this.knightsPlayed[player] > this.knightsPlayed[this.largestArmyPlayer]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void moveLargestArmy(int player) {
+        if(this.largestArmyPlayer != -1) {
+            takeScore(this.largestArmyPlayer);
+            takeScore(this.largestArmyPlayer);
+        }
+        this.largestArmyPlayer = player;
+        giveScore(player);
+        giveScore(player);
+    }
+    
+
+    public int getMaxRoadChainLength(int player) {
+        List<Integer> roads = getPlayerRoads(player);
+        int maxLength = 0;
+        for(int road : roads) {
+            Set<Integer> initialSet = new HashSet<>();  // Create empty set
+            initialSet.add(road);                       // Add the initial road
+            maxLength = Math.max(maxLength, getRoadChainLength(road, EdgeState.roadFromPlayer(player), initialSet));
+        }
+        return maxLength;
+    }
+
+    public int getRoadChainLength(int currentRoad, EdgeState playerRoad, Set<Integer> visited) {
+        int maxLength = visited.size();
+        for(int edge : AdjacentDicts.edgeAdjacentEdges[currentRoad]) {
+            if(edge != -1 && this.edges[edge] == playerRoad && !visited.contains(edge)) {
+                Set<Integer> newVisited = new HashSet<>(visited);
+                newVisited.add(edge);
+                maxLength = Math.max(maxLength, getRoadChainLength(edge, playerRoad, newVisited));
+            }
+        }
+        return maxLength;
+    }
+    
+
+    public List<Integer> getPlayerRoads(int player) {
+        List<Integer> roads = new ArrayList<Integer>();
+        for(int i = 0; i < 19; i++) {
+            if(this.edges[i] == EdgeState.roadFromPlayer(player)) {
+                roads.add(i);
+            }
+        }
+        return roads;
+    }
+    
+    public boolean checkLongestRoad(int player) {
+        if(this.roadLengths[player] >= 5) {
+            if(this.longestRoadPlayer == -1) { return true;}
+            if(this.roadLengths[player] > this.roadLengths[this.longestRoadPlayer]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void moveLongestRoad(int player) {
+        if(this.longestRoadPlayer != -1) {
+            takeScore(this.longestRoadPlayer);
+            takeScore(this.longestRoadPlayer);
+        }
+        this.longestRoadPlayer = player;
+        giveScore(player);
+        giveScore(player);
+    }
 
     public void endGame(int player) {
         System.out.println("Player P" + (player + 1) + " wins!");
@@ -383,8 +499,13 @@ public class CatanBoard {
             case BUILD_ROAD:
                 this.edges[action.getArgs()[0]] = EdgeState.roadFromPlayer(catanPlayer);
                 this.openEdges.remove(action.getArgs()[0]);
+                this.buildableRoads[catanPlayer]--;
                 payResourceToBank(catanPlayer, Resource.BRICK, 1);
                 payResourceToBank(catanPlayer, Resource.WOOD, 1);
+                this.roadLengths[catanPlayer] = getMaxRoadChainLength(catanPlayer);
+                if(checkLongestRoad(catanPlayer)) {
+                    moveLongestRoad(catanPlayer);
+                }
                 System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0]);
                 break;
             case BUILD_SETTLEMENT:
@@ -392,6 +513,7 @@ public class CatanBoard {
                 this.openVertices.remove(action.getArgs()[0]);
                 this.settlableVertices.remove(action.getArgs()[0]);
                 this.cityableVertices.add(action.getArgs()[0]);
+                this.buildableSettlements[catanPlayer]--;
                 for(int j = 0; j < 3; j++) {
                     this.settlableVertices.remove(AdjacentDicts.vertexAdjacentVertices[action.getArgs()[0]][j]);
                 }
@@ -406,6 +528,8 @@ public class CatanBoard {
                 this.vertices[action.getArgs()[0]] = VertexState.cityFromPlayer(catanPlayer);
                 this.cityableVertices.remove(action.getArgs()[0]);
                 giveScore(catanPlayer);
+                this.buildableCities[catanPlayer]--;
+                this.buildableSettlements[catanPlayer]++;
                 System.out.println("Player P" + (catanPlayer + 1) + " Building city at vertex " + action.getArgs()[0]);
                 break;
             case TRADE_WITH_BANK:
@@ -472,6 +596,9 @@ public class CatanBoard {
                     this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][i] = false;
                 }
                 this.knightsPlayed[catanPlayer]++;
+                if(checkLargestArmy(catanPlayer)) {
+                    moveLargestArmy(catanPlayer);
+                }
                 System.out.println("Player P" + (catanPlayer + 1) + " Playing knight on tile " + action.getArgs()[0]);
                 for (int i = 0; i < 19; i++) {
                     this.tiles[i].setRobbed(false);
@@ -500,6 +627,11 @@ public class CatanBoard {
                     this.edges[action.getArgs()[i]] = EdgeState.roadFromPlayer(catanPlayer);
                     this.openEdges.remove(action.getArgs()[i]);
                 }
+                this.buildableRoads[catanPlayer] -= 2;
+                this.roadLengths[catanPlayer] = getMaxRoadChainLength(catanPlayer);
+                if(checkLongestRoad(catanPlayer)) {
+                    moveLongestRoad(catanPlayer);
+                }
                 System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0] + " and " + action.getArgs()[1]);
                 break;
             case PLAY_YEAR_OF_PLENTY:
@@ -508,7 +640,7 @@ public class CatanBoard {
                 }
                 if(action.getArgs().length == 1) {
                     giveResource(catanPlayer, Resource.values()[action.getArgs()[0]], 2);
-                    System.out.println("Player P" + (catanPlayer + 1) + " Playing year of plenty with " + Resource.values()[action.getArgs()[0]] + " and " + Resource.values()[action.getArgs()[1]]);
+                    System.out.println("Player P" + (catanPlayer + 1) + " Playing year of plenty with " + Resource.values()[action.getArgs()[0]]);
                 } else {
                     giveResource(catanPlayer, Resource.values()[action.getArgs()[0]], 1);
                     giveResource(catanPlayer, Resource.values()[action.getArgs()[1]], 1);
@@ -704,29 +836,69 @@ public class CatanBoard {
         out += "\n        " + displayEdge(64,"\\") + " " + displayEdge(63,"/") + "   " + displayEdge(68,"\\") + " " + displayEdge(67,"/") + "   " + displayEdge(71, "\\") + " " + displayEdge(70,"/");
         out += "\n         " + getVertexDisplay(48) + "     " + getVertexDisplay(51) + "     " + getVertexDisplay(53);
         out += "\n     " + Resource.BRICK + " " + Resource.WHEAT + " " + 
-               Resource.WOOD + " " + Resource.ORE + " " + Resource.SHEEP + " PTS";
+               Resource.WOOD + " " + Resource.ORE + " " + Resource.SHEEP + " DEV PTS";
         
         out += Color.RED + "\nP1: " + Color.RESET + 
-               String.format("%3d %3d %3d %3d %3d %3d", 
+               String.format("%3d %3d %3d %3d %3d %3d %3d", 
                this.playerHands[0][0], this.playerHands[0][1], this.playerHands[0][2], 
-               this.playerHands[0][3], this.playerHands[0][4], this.playerScores[0]);
+               this.playerHands[0][3], this.playerHands[0][4], StringUtils.sum(this.developmentCardsInHand[0]), this.playerScores[0]);
         
         out += Color.GREEN + "\nP2: " + Color.RESET + 
-               String.format("%3d %3d %3d %3d %3d %3d", 
+               String.format("%3d %3d %3d %3d %3d %3d %3d", 
                this.playerHands[1][0], this.playerHands[1][1], this.playerHands[1][2], 
-               this.playerHands[1][3], this.playerHands[1][4], this.playerScores[1]);
+               this.playerHands[1][3], this.playerHands[1][4], StringUtils.sum(this.developmentCardsInHand[1]), this.playerScores[1]);
         
         out += Color.YELLOW + "\nP3: " + Color.RESET + 
-               String.format("%3d %3d %3d %3d %3d %3d", 
+               String.format("%3d %3d %3d %3d %3d %3d %3d", 
                this.playerHands[2][0], this.playerHands[2][1], this.playerHands[2][2], 
-               this.playerHands[2][3], this.playerHands[2][4], this.playerScores[2]);
+               this.playerHands[2][3], this.playerHands[2][4], StringUtils.sum(this.developmentCardsInHand[2]), this.playerScores[2]);
         
         out += Color.BLUE + "\nP4: " + Color.RESET + 
-               String.format("%3d %3d %3d %3d %3d %3d", 
+               String.format("%3d %3d %3d %3d %3d %3d %3d", 
                this.playerHands[3][0], this.playerHands[3][1], this.playerHands[3][2], 
-               this.playerHands[3][3], this.playerHands[3][4], this.playerScores[3]);
-        out += "\nBNK:" + String.format("%3d %3d %3d %3d %3d", 
-               this.resourceCounts[0], this.resourceCounts[1], this.resourceCounts[2], this.resourceCounts[3], this.resourceCounts[4]);
+               this.playerHands[3][3], this.playerHands[3][4], StringUtils.sum(this.developmentCardsInHand[3]), this.playerScores[3]);
+        out += "\nBNK:" + String.format("%3d %3d %3d %3d %3d %3d", 
+               this.resourceCounts[0], this.resourceCounts[1], this.resourceCounts[2], this.resourceCounts[3], this.resourceCounts[4], this.developmentCardsInDeck.size());
+        if(this.longestRoadPlayer != -1) {
+            String playerNameColor;
+            switch(this.longestRoadPlayer) {
+                case 0:
+                    playerNameColor = Color.RED + "P1" + Color.RESET;
+                    break;
+                case 1:
+                    playerNameColor = Color.GREEN + "P2" + Color.RESET;
+                    break;
+                case 2:
+                    playerNameColor = Color.YELLOW + "P3" + Color.RESET;
+                    break;
+                case 3:
+                    playerNameColor = Color.BLUE + "P4" + Color.RESET;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid longest road player");
+            }
+            out += "\nLONGEST ROAD: " + playerNameColor + " with length " + this.roadLengths[this.longestRoadPlayer];
+        }
+        if(this.largestArmyPlayer != -1) {
+            String playerNameColor;
+            switch(this.largestArmyPlayer) {
+                case 0:
+                    playerNameColor = Color.RED + "P1" + Color.RESET;
+                    break;
+                case 1:
+                    playerNameColor = Color.GREEN + "P2" + Color.RESET;
+                    break;
+                case 2:
+                    playerNameColor = Color.YELLOW + "P3" + Color.RESET;
+                    break;
+                case 3:
+                    playerNameColor = Color.BLUE + "P4" + Color.RESET;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid largest army player");
+            }
+            out += "\nLARGEST ARMY: " + playerNameColor + " with " + this.knightsPlayed[this.largestArmyPlayer] + " knights";
+        }
         try {
             FileWriter writer = new FileWriter("board.txt");
             writer.write(out);
