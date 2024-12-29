@@ -12,6 +12,8 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
+import com.sun.source.doctree.ThrowsTree;
+
 import catan.enums.EdgeState;
 import catan.enums.Odds;
 import catan.enums.Resource;
@@ -41,11 +43,12 @@ public class CatanBoard {
     private int[][] bankTradesOffered;
     private int[][] developmentCardsInHand;
     private Queue<Integer> developmentCardsInDeck;
+    private boolean[][] canPlayDevelopmentCardTypeThisTurn;
     private int[] resourceCounts;
     private int[] playerScores;
     private int scoreToWin;
     private CatanPlayer[] players;
-
+    private int[] knightsPlayed;
     
     public CatanBoard() {
 
@@ -83,12 +86,15 @@ public class CatanBoard {
         this.resourceCounts = new int[] {19, 19, 19, 19, 19};
         this.bankTradesOffered = new int[][] {{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4}};
         this.developmentCardsInHand = new int[4][5];
-        ArrayList storeList = new ArrayList<>(Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4)); 
+        //0: knight, 1: road building, 2: year of plenty, 3: monopoly 4: victory point
+        ArrayList storeList = new ArrayList<>(Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 4)); 
         Collections.shuffle(storeList);
         this.developmentCardsInDeck = new LinkedList<>(storeList); 
+        this.canPlayDevelopmentCardTypeThisTurn = new boolean[4][4];
         this.playerScores = new int[] {0, 0, 0, 0};
         this.scoreToWin = 10;
         this.players = new CatanPlayer[4];
+        this.knightsPlayed = new int[4];
     }
     
 
@@ -156,6 +162,51 @@ public class CatanBoard {
                 }
             }
         }
+        if(this.playerHands[catanPlayer][Resource.toInt(Resource.WHEAT)] > 0 && this.playerHands[catanPlayer][Resource.toInt(Resource.SHEEP)] > 0 && this.playerHands[catanPlayer][Resource.toInt(Resource.ORE)] > 0) {
+            actions.add(new Action(Action.ActionType.PURCHASE_DEVELOPMENT_CARD, new int[] {}));
+        }
+        if(this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][0]) {
+            for(int i = 0; i < 19; i++) {
+                if(this.tiles[i].isUnRobbed()) {
+                    actions.add(new Action(Action.ActionType.PLAY_KNIGHT, new int[] {i}));
+                }
+            }
+        }
+        if(this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][1]) {
+            Set<Integer> placableRoads = getPlacableRoads(catanPlayer);
+            for(int road : placableRoads) {
+                for(int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[road]) {
+                    if(adjacentEdge != -1 && this.edges[adjacentEdge] == EdgeState.Empty && !placableRoads.contains(adjacentEdge)) {
+                        actions.add(new Action(Action.ActionType.PLAY_ROAD_BUILDING, new int[] {road, adjacentEdge}));
+                    }
+                }
+            }
+            List<Integer> placableRoadsList = new ArrayList<>(placableRoads);
+            for(int i = 0; i < placableRoadsList.size(); i++) {
+                for(int j = i + 1; j < placableRoadsList.size(); j++) {
+                    actions.add(new Action(Action.ActionType.PLAY_ROAD_BUILDING, new int[] {placableRoadsList.get(i), placableRoadsList.get(j)}));
+                }
+            }
+        }
+        if(this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][2]) {
+            for(int i = 0; i < 5; i++) {
+                if(this.resourceCounts[i] >= 2) {
+                    actions.add(new Action(Action.ActionType.PLAY_YEAR_OF_PLENTY, new int[] {i}));
+                }
+            }
+            for(int i = 0; i < 5; i++) {
+                for(int j = i + 1; j < 5; j++) {
+                    if(this.resourceCounts[i] >= 1 && this.resourceCounts[j] >= 1) {
+                        actions.add(new Action(Action.ActionType.PLAY_YEAR_OF_PLENTY, new int[] {i, j}));
+                    }
+                }
+            }
+        }
+        if(this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][3]) {
+            for(int i = 0; i < 5; i++) {
+                actions.add(new Action(Action.ActionType.PLAY_MONOPOLY, new int[] {i}));
+            }
+        }
         actions.add(new Action(Action.ActionType.PASS, new int[] {}));
         return actions;
     }
@@ -185,8 +236,6 @@ public class CatanBoard {
         this.tiles[17].populateVerticesAndEdges(new Tile[] {tiles[14], null, null, null, tiles[16], tiles[13]}, this);
         this.tiles[18].populateVerticesAndEdges(new Tile[] {tiles[15], null, null, null, tiles[17], tiles[14]}, this);
     }
-
-
     public int allocateNewVertex() {
         int newVertex = this.vertexIndex;
         this.vertexIndex++;
@@ -201,7 +250,6 @@ public class CatanBoard {
     public boolean hasAdjacentRoad(int vertex, int player) {
         return true;
     }
-
     public boolean isValidSettlementPlacement(int vertex) {
         if(vertex < 0 || vertex > 53) {
             throw new IllegalArgumentException("Invalid vertex");
@@ -219,7 +267,6 @@ public class CatanBoard {
         }
         return true;
     }
-
     public boolean areAdjacent(int vertex, int edge) {
         for(int i = 0; i < 3; i++) {
             if(AdjacentDicts.vertexAdjacentEdges[vertex][i] == edge) {
@@ -228,7 +275,19 @@ public class CatanBoard {
         }
         return false;
     }
-    
+
+    public Set<Integer> getPlacableRoads(int catanPlayer) {
+        Set<Integer> placableRoads = new HashSet<>();
+        for(int edge : this.openEdges) {
+            for (int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[edge]) {
+                if(adjacentEdge != -1 && this.edges[adjacentEdge] == EdgeState.roadFromPlayer(catanPlayer)) {
+                    placableRoads.add(edge);
+                }
+            }
+        }
+        return placableRoads;
+    }
+
     public void moveResourceFromPlayerToPlayer(int givePlayer, int receivePlayer, int amount, Resource resource) {
         if(this.playerHands[givePlayer][Resource.toInt(resource)] - amount < 0) {
             throw new IllegalArgumentException("Not enough resources to move");
@@ -248,9 +307,19 @@ public class CatanBoard {
                     sum += this.playerHands[i][j];
                 }
                 if(sum >= 7) {
-                    int[] discarded = this.players[i].discardHalfOfHand(this, this.playerHands[i], (sum + 1) / 2);
+                    int[] discarded = this.players[i].discardHalfOfHand(this, Arrays.copyOf(this.playerHands[i], 5), (sum + 1) / 2);
+                    int count = 0;
                     for(int j = 0; j < 5; j++) {
-                        this.playerHands[i][j] -= discarded[j];
+                        count += discarded[j];
+                    }
+                    if(count != (sum + 1) / 2) {
+                        throw new IllegalArgumentException("Invalid discard: Incorrect number of resources discarded");
+                    }
+                    for(int j = 0; j < 5; j++) {
+                        if(this.playerHands[i][j] < discarded[j]) {
+                            throw new IllegalArgumentException("Invalid discard: Not enough resources in hand");
+                        }
+                        payResourceToBank(i, Resource.values()[j], discarded[j]);
                     }
                 }
             }
@@ -282,10 +351,18 @@ public class CatanBoard {
     }
 
     public int takeTurn(int catanPlayer, CatanPlayer player) {
+        for(int i = 0; i < 4; i++) {
+            for(int j = 0; j < 4; j++) {
+                this.canPlayDevelopmentCardTypeThisTurn[i][j] = this.developmentCardsInHand[i][j] > 0;
+            }
+        }
         rollDice(catanPlayer);
-        List<Action> actions = getValidActions(catanPlayer);
-        Action action = player.chooseAction(this, actions);
-        executeAction(action, catanPlayer);
+        Action chosenAction;
+        do {
+            List<Action> actions = getValidActions(catanPlayer);
+            chosenAction = player.chooseAction(this, actions);
+            executeAction(chosenAction, catanPlayer);
+        } while(chosenAction.getType() != Action.ActionType.PASS);
         return (catanPlayer + 1) % 4;
     }
 
@@ -342,6 +419,9 @@ public class CatanBoard {
             case PURCHASE_DEVELOPMENT_CARD:
                 int card = this.developmentCardsInDeck.poll();
                 this.developmentCardsInHand[catanPlayer][card]++;
+                if(card == 4) {
+                    giveScore(catanPlayer);
+                }
                 payResourceToBank(catanPlayer, Resource.WHEAT, 1);
                 payResourceToBank(catanPlayer, Resource.SHEEP, 1);
                 payResourceToBank(catanPlayer, Resource.ORE, 1);
@@ -386,6 +466,65 @@ public class CatanBoard {
                     }
                 }
                 System.out.println("Player P" + (catanPlayer + 1) + " Stealing resource from player P" + (fromPlayer + 1));
+                break;
+            case PLAY_KNIGHT:
+                for(int i = 0; i < 4; i++) {
+                    this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][i] = false;
+                }
+                this.knightsPlayed[catanPlayer]++;
+                System.out.println("Player P" + (catanPlayer + 1) + " Playing knight on tile " + action.getArgs()[0]);
+                for (int i = 0; i < 19; i++) {
+                    this.tiles[i].setRobbed(false);
+                }
+                this.tiles[action.getArgs()[0]].setRobbed(true);
+                List<Action> knightStealActions = new ArrayList<Action>();
+                for(int i = 0; i < 6; i++) {
+                    int vertexId = this.tiles[action.getArgs()[0]].getVertexId(i);
+                    if(this.vertices[vertexId] != VertexState.Empty) {
+                        int player = VertexState.getPlayer(this.vertices[vertexId]);
+                        if(player != catanPlayer) {
+                            knightStealActions.add(new Action(Action.ActionType.STEAL_RESOURCE, new int[] {player}));
+                        }
+                    }
+                    if(!knightStealActions.isEmpty()) {
+                        Action chosen = this.players[catanPlayer].chooseAction(this, knightStealActions);
+                        executeAction(chosen, catanPlayer);
+                    }
+                }
+                break;
+            case PLAY_ROAD_BUILDING:
+                for(int i = 0; i < 4; i++) {
+                    this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][i] = false;
+                }
+                for(int i = 0; i < 2; i++) {
+                    this.edges[action.getArgs()[i]] = EdgeState.roadFromPlayer(catanPlayer);
+                    this.openEdges.remove(action.getArgs()[i]);
+                }
+                System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0] + " and " + action.getArgs()[1]);
+                break;
+            case PLAY_YEAR_OF_PLENTY:
+                for(int i = 0; i < 4; i++) {
+                    this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][i] = false;
+                }
+                if(action.getArgs().length == 1) {
+                    giveResource(catanPlayer, Resource.values()[action.getArgs()[0]], 2);
+                    System.out.println("Player P" + (catanPlayer + 1) + " Playing year of plenty with " + Resource.values()[action.getArgs()[0]] + " and " + Resource.values()[action.getArgs()[1]]);
+                } else {
+                    giveResource(catanPlayer, Resource.values()[action.getArgs()[0]], 1);
+                    giveResource(catanPlayer, Resource.values()[action.getArgs()[1]], 1);
+                    System.out.println("Player P" + (catanPlayer + 1) + " Playing year of plenty with " + Resource.values()[action.getArgs()[0]] + " and " + Resource.values()[action.getArgs()[1]]);
+                }
+                break;
+            case PLAY_MONOPOLY:
+                for(int i = 0; i < 4; i++) {
+                    this.canPlayDevelopmentCardTypeThisTurn[catanPlayer][i] = false;
+                }
+                for(int i = 0; i < 4; i++) {
+                    if(i != catanPlayer) {
+                        moveResourceFromPlayerToPlayer(i, catanPlayer, this.playerHands[i][action.getArgs()[0]], Resource.values()[action.getArgs()[0]]);
+                    }
+                }
+                System.out.println("Player P" + (catanPlayer + 1) + " Playing monopoly with " + Resource.values()[action.getArgs()[0]]);
                 break;
             case PASS:
                 break;  

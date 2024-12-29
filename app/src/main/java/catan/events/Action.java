@@ -83,11 +83,17 @@ public class Action {
                 }
                 break;
             case PLAY_YEAR_OF_PLENTY:
-                if(args.length != 2 ) {
-                    throw new IllegalArgumentException("PLAY_YEAR_OF_PLENTY action requires 2 arguments");
+                if(args.length > 2  || args.length < 1) {
+                    throw new IllegalArgumentException("PLAY_YEAR_OF_PLENTY action requires 1 or 2 arguments");
                 }
-                if(args[0] < 0 || args[0] > 4 || args[1] < 0 || args[1] > 4) {
-                    throw new IllegalArgumentException("PLAY_YEAR_OF_PLENTY action requires valid resource arguments");
+                if(args.length == 1) {
+                    if(args[0] < 0 || args[0] > 4) {
+                        throw new IllegalArgumentException("PLAY_YEAR_OF_PLENTY action requires a valid resource argument");
+                    }
+                } else {
+                    if(args[0] < 0 || args[0] > 4 || args[1] < 0 || args[1] > 4) {
+                        throw new IllegalArgumentException("PLAY_YEAR_OF_PLENTY action requires valid resource arguments");
+                    }
                 }
                 break;
             case PLAY_ROAD_BUILDING:

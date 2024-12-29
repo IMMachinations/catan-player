@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 
 import catan.board.CatanBoard;
+import catan.enums.Resource;
 import catan.events.Action;
 import catan.utils.AdjacentDicts;
 
@@ -67,20 +68,20 @@ public class SmartRandomPlayer extends CatanPlayer {
         int count = 0;
         while(numToDiscard > 0) {
             for(int i = 0; i < 5; i++) {
-                if(hand[order[i]] == 0) {
-                    continue;
-                }
                 if(numToDiscard == 0) {
                     break;
                 }
-                System.out.println("numToDiscard: " + numToDiscard + " hand[order[i]]: " + hand[order[i]] + " count: " + count);
+                if(hand[order[i]] == 0) {
+                    continue;
+                }
                 count = rand.nextInt(Math.min(numToDiscard, hand[order[i]]) + 1);
+                System.out.println("Resource: " + Resource.values()[order[i]] + " numToDiscard: " + numToDiscard + " hand[order[i]]: " + hand[order[i]] + " count: " + count);
                 discarded[order[i]] += count;
                 numToDiscard -= count;
                 hand[order[i]] -= count;
             }
         }
-
+        System.out.println("Discarded: " + Arrays.toString(discarded));
         return discarded;
     }
 }
