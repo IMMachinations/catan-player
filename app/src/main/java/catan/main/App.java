@@ -18,9 +18,7 @@ public class App {
     public static void main(String[] args) {
         CatanBoard board = new CatanBoard();
         board.populateBoard();
-        //board.printBoard();
-        //board.displayBoard();
-        //board.printAdjacentTilesAndEdges();
+
         CatanPlayer randomPlayer = new SmartRandomPlayer();
         board.placeStartingPositions(new CatanPlayer[]{randomPlayer,randomPlayer,randomPlayer,randomPlayer});
         int currentPlayer = 0;

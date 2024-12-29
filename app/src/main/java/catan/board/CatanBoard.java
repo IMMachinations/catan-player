@@ -3,8 +3,12 @@ package catan.board;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
@@ -35,9 +39,12 @@ public class CatanBoard {
 
     private int[][] playerHands;
     private int[][] bankTradesOffered;
+    private int[][] developmentCardsInHand;
+    private Queue<Integer> developmentCardsInDeck;
     private int[] resourceCounts;
     private int[] playerScores;
     private int scoreToWin;
+    private CatanPlayer[] players;
 
     
     public CatanBoard() {
@@ -75,8 +82,13 @@ public class CatanBoard {
         this.playerHands = new int[4][5];
         this.resourceCounts = new int[] {19, 19, 19, 19, 19};
         this.bankTradesOffered = new int[][] {{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4},{4, 4, 4, 4, 4}};
+        this.developmentCardsInHand = new int[4][5];
+        ArrayList storeList = new ArrayList<>(Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4)); 
+        Collections.shuffle(storeList);
+        this.developmentCardsInDeck = new LinkedList<>(storeList); 
         this.playerScores = new int[] {0, 0, 0, 0};
         this.scoreToWin = 10;
+        this.players = new CatanPlayer[4];
     }
     
 
@@ -91,12 +103,12 @@ public class CatanBoard {
         this.playerHands[player][Resource.toInt(resource)] += amount;
         return 0;
     }
-    public int takeResource(int player, Resource resource, int amount) {
+    public int payResourceToBank(int player, Resource resource, int amount) {
         if(amount <= 0) {
             return 0;
         }
         if(this.playerHands[player][Resource.toInt(resource)] - amount < 0) {
-            return takeResource(player, resource, this.playerHands[player][Resource.toInt(resource)]);
+            return payResourceToBank(player, resource, this.playerHands[player][Resource.toInt(resource)]);
         }
         this.playerHands[player][Resource.toInt(resource)] -= amount;
         this.resourceCounts[Resource.toInt(resource)] += amount;
@@ -217,11 +229,41 @@ public class CatanBoard {
         return false;
     }
     
-    public Odds rollDice() {
+    public void moveResourceFromPlayerToPlayer(int givePlayer, int receivePlayer, int amount, Resource resource) {
+        if(this.playerHands[givePlayer][Resource.toInt(resource)] - amount < 0) {
+            throw new IllegalArgumentException("Not enough resources to move");
+        }
+        this.playerHands[givePlayer][Resource.toInt(resource)] -= amount;
+        this.playerHands[receivePlayer][Resource.toInt(resource)] += amount;
+    }
+    public Odds rollDice(int playerIndex) {
         int roll1 = rand.nextInt(6);
         int roll2 = rand.nextInt(6);
         Odds roll = Odds.values()[roll1 + roll2];
         if (roll == Odds.SEVEN) {
+            int sum;
+            for(int i = 0; i < 4; i++) {
+                sum = 0;
+                for(int j = 0; j < 5; j++) {
+                    sum += this.playerHands[i][j];
+                }
+                if(sum >= 7) {
+                    int[] discarded = this.players[i].discardHalfOfHand(this, this.playerHands[i], (sum + 1) / 2);
+                    for(int j = 0; j < 5; j++) {
+                        this.playerHands[i][j] -= discarded[j];
+                    }
+                }
+            }
+
+            List<Action> actions = new ArrayList<Action>();
+            for(int i = 0; i < 19; i++) {
+                if(this.tiles[i].isUnRobbed()) {
+                    actions.add(new Action(Action.ActionType.MOVE_ROBBER, new int[] {i}));
+                }
+            }
+            Action chosen = this.players[playerIndex].chooseAction(this, actions);
+            executeAction(chosen, playerIndex);
+
             return roll;
         } 
         for (int i = 0; i < 19; i++) {
@@ -240,7 +282,7 @@ public class CatanBoard {
     }
 
     public int takeTurn(int catanPlayer, CatanPlayer player) {
-        rollDice();
+        rollDice(catanPlayer);
         List<Action> actions = getValidActions(catanPlayer);
         Action action = player.chooseAction(this, actions);
         executeAction(action, catanPlayer);
@@ -264,8 +306,8 @@ public class CatanBoard {
             case BUILD_ROAD:
                 this.edges[action.getArgs()[0]] = EdgeState.roadFromPlayer(catanPlayer);
                 this.openEdges.remove(action.getArgs()[0]);
-                takeResource(catanPlayer, Resource.BRICK, 1);
-                takeResource(catanPlayer, Resource.WOOD, 1);
+                payResourceToBank(catanPlayer, Resource.BRICK, 1);
+                payResourceToBank(catanPlayer, Resource.WOOD, 1);
                 System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0]);
                 break;
             case BUILD_SETTLEMENT:
@@ -276,10 +318,10 @@ public class CatanBoard {
                 for(int j = 0; j < 3; j++) {
                     this.settlableVertices.remove(AdjacentDicts.vertexAdjacentVertices[action.getArgs()[0]][j]);
                 }
-                takeResource(catanPlayer, Resource.BRICK, 1);
-                takeResource(catanPlayer, Resource.WOOD, 1);
-                takeResource(catanPlayer, Resource.WHEAT, 1);
-                takeResource(catanPlayer, Resource.SHEEP, 1);
+                payResourceToBank(catanPlayer, Resource.BRICK, 1);
+                payResourceToBank(catanPlayer, Resource.WOOD, 1);
+                payResourceToBank(catanPlayer, Resource.WHEAT, 1);
+                payResourceToBank(catanPlayer, Resource.SHEEP, 1);
                 System.out.println("Player P" + (catanPlayer + 1) + " Building settlement at vertex " + action.getArgs()[0]);
                 giveScore(catanPlayer);
                 break;  
@@ -293,9 +335,57 @@ public class CatanBoard {
                 int giveResource = action.getArgs()[0];
                 int amount = action.getArgs()[1];
                 int receiveResource = action.getArgs()[2];
-                takeResource(catanPlayer, Resource.values()[giveResource], amount);
+                payResourceToBank(catanPlayer, Resource.values()[giveResource], amount);
                 giveResource(catanPlayer, Resource.values()[receiveResource], 1);
                 System.out.println("Player P" + (catanPlayer + 1) + " Trading with bank " + amount + " " + Resource.values()[giveResource] + " for " + 1 + " " + Resource.values()[receiveResource]);
+                break;
+            case PURCHASE_DEVELOPMENT_CARD:
+                int card = this.developmentCardsInDeck.poll();
+                this.developmentCardsInHand[catanPlayer][card]++;
+                payResourceToBank(catanPlayer, Resource.WHEAT, 1);
+                payResourceToBank(catanPlayer, Resource.SHEEP, 1);
+                payResourceToBank(catanPlayer, Resource.ORE, 1);
+                System.out.println("Player P" + (catanPlayer + 1) + " Buying development card " + card);
+                break;
+            case MOVE_ROBBER:
+                for (int i = 0; i < 19; i++) {
+                    this.tiles[i].setRobbed(false);
+                }
+                this.tiles[action.getArgs()[0]].setRobbed(true);
+                System.out.println("Player P" + (catanPlayer + 1) + " Moving robber to tile " + action.getArgs()[0]);
+                List<Action> stealActions = new ArrayList<Action>();
+                for(int i = 0; i < 6; i++) {
+                    int vertexId = this.tiles[action.getArgs()[0]].getVertexId(i);
+                    if(this.vertices[vertexId] != VertexState.Empty) {
+                        int player = VertexState.getPlayer(this.vertices[vertexId]);
+                        if(player != catanPlayer) {
+                            stealActions.add(new Action(Action.ActionType.STEAL_RESOURCE, new int[] {player}));
+                        }
+                    }
+                    if(!stealActions.isEmpty()) {
+                        Action chosen = this.players[catanPlayer].chooseAction(this, stealActions);
+                        executeAction(chosen, catanPlayer);
+                    }
+                }
+                break;
+            case STEAL_RESOURCE:
+                int fromPlayer = action.getArgs()[0];
+                int handSize = 0;
+                for(int i = 0; i < 5; i++) {
+                    handSize += this.playerHands[fromPlayer][i];
+                }
+                if(handSize <=0) {
+                    break;
+                }
+                int toStealId = rand.nextInt(handSize);
+                for(int i = 0; i < 5; i++) {
+                    toStealId -= this.playerHands[fromPlayer][i];
+                    if(toStealId < 0) {
+                        moveResourceFromPlayerToPlayer(fromPlayer, catanPlayer, 1, Resource.values()[i]);
+                        break;
+                    }
+                }
+                System.out.println("Player P" + (catanPlayer + 1) + " Stealing resource from player P" + (fromPlayer + 1));
                 break;
             case PASS:
                 break;  
@@ -370,6 +460,7 @@ public class CatanBoard {
             }
             executeAction(chosen, i);
         }
+        this.players = players;
     }
 
     // Helper method to get valid starting positions

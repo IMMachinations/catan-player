@@ -1,7 +1,8 @@
 package catan.board;
 
-import catan.enums.*;
-import catan.utils.*;
+import catan.enums.Odds;
+import catan.enums.Resource;
+import catan.utils.VertexDirection;
 
 class Tile {
     private Resource resource;
@@ -30,7 +31,12 @@ class Tile {
     public int getEdgeId(int id) {
         return this.edges[id];
     }
-
+    public void setRobbed(boolean robbed) {
+        this.isRobbed = robbed;
+    }
+    public boolean isUnRobbed() {
+        return !this.isRobbed;
+    }
     public void populateVerticesAndEdges(Tile[] tiles, CatanBoard board) {
         for (int i = 0; i < 6; i++) {
             int[] adjacentEdges = VertexDirection.getAdjacentEdges(i);

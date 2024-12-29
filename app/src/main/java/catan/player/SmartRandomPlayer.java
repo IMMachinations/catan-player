@@ -1,6 +1,7 @@
 
 package catan.player;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -56,5 +57,30 @@ public class SmartRandomPlayer extends CatanPlayer {
             return chooseStartingSettlement(board, possibleActions);
         }
         return possibleActions.get(rand.nextInt(possibleActions.size()));
+    }
+
+    @Override
+    public int[] discardHalfOfHand(CatanBoard board, int[] hand, int numToDiscard) {
+        int[] discarded = new int[5];
+        int[] order = new int[] {0,1,2,3,4};
+        Collections.shuffle(Arrays.asList(order));
+        int count = 0;
+        while(numToDiscard > 0) {
+            for(int i = 0; i < 5; i++) {
+                if(hand[order[i]] == 0) {
+                    continue;
+                }
+                if(numToDiscard == 0) {
+                    break;
+                }
+                System.out.println("numToDiscard: " + numToDiscard + " hand[order[i]]: " + hand[order[i]] + " count: " + count);
+                count = rand.nextInt(Math.min(numToDiscard, hand[order[i]]) + 1);
+                discarded[order[i]] += count;
+                numToDiscard -= count;
+                hand[order[i]] -= count;
+            }
+        }
+
+        return discarded;
     }
 }

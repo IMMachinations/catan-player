@@ -3,6 +3,9 @@ package catan.player;
 
 import java.util.List;
 import java.util.Random;
+import java.util.Collections;
+import java.util.Arrays;
+
 
 import catan.board.CatanBoard;
 import catan.events.Action;
@@ -63,5 +66,23 @@ public class RandomPlayer extends CatanPlayer {
     @Override
     public Action chooseAction(CatanBoard board, List<Action> possibleActions) {
         return possibleActions.get(rand.nextInt(possibleActions.size()));
+    }
+
+    @Override
+    public int[] discardHalfOfHand(CatanBoard board, int[] hand, int numToDiscard) {
+        int[] discarded = new int[5];
+        int[] order = new int[] {0,1,2,3,4};
+        Collections.shuffle(Arrays.asList(order));
+        int count = 0;
+        while(numToDiscard > 0) {
+            for(int i = 0; i < 5; i++) {
+                count = rand.nextInt(Math.min(numToDiscard,hand[order[i]]));
+                discarded[order[i]] += count;
+                numToDiscard -= count;
+                hand[order[i]] -= count;
+            }
+        }
+
+        return discarded;
     }
 }
