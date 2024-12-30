@@ -20,4 +20,7 @@ public enum EdgeState {
         }
         return values()[player + 1]; // +1 to skip Empty
     }
+    public int getPlayer() {
+        return this.ordinal() - 1;
+    }
 }

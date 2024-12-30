@@ -1,4 +1,3 @@
-
 package catan.player;
 
 import java.util.Arrays;
@@ -7,7 +6,6 @@ import java.util.List;
 import java.util.Random;
 
 import catan.board.CatanBoard;
-import catan.enums.Resource;
 import catan.events.Action;
 import catan.utils.AdjacentDicts;
 
@@ -63,7 +61,7 @@ public class SmartRandomPlayer extends CatanPlayer {
     @Override
     public int[] discardHalfOfHand(CatanBoard board, int[] hand, int numToDiscard) {
         int[] discarded = new int[5];
-        int[] order = new int[] {0,1,2,3,4};
+        Integer[] order = new Integer[] {0,1,2,3,4};
         Collections.shuffle(Arrays.asList(order));
         int count = 0;
         while(numToDiscard > 0) {
@@ -75,7 +73,6 @@ public class SmartRandomPlayer extends CatanPlayer {
                     continue;
                 }
                 count = rand.nextInt(Math.min(numToDiscard, hand[order[i]]) + 1);
-                System.out.println("Resource: " + Resource.values()[order[i]] + " numToDiscard: " + numToDiscard + " hand[order[i]]: " + hand[order[i]] + " count: " + count);
                 discarded[order[i]] += count;
                 numToDiscard -= count;
                 hand[order[i]] -= count;

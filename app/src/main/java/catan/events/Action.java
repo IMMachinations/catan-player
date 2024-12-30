@@ -4,6 +4,7 @@ public class Action {
     public enum ActionType {
         BUILD_ROAD,
         BUILD_SETTLEMENT,
+        BUILD_SETTLEMENT_START,
         BUILD_CITY,
         TRADE_WITH_BANK,
         TRADE_WITH_PLAYER,
@@ -32,6 +33,7 @@ public class Action {
                 break;
 
             case BUILD_SETTLEMENT:
+            case BUILD_SETTLEMENT_START:
             case BUILD_CITY:
                 if(args.length != 1) {
                     throw new IllegalArgumentException(type + " action requires 1 argument");

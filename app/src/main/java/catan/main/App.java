@@ -3,8 +3,6 @@
  */
 package catan.main;
 
-import java.util.concurrent.TimeUnit;
-
 import catan.board.CatanBoard;
 import catan.player.CatanPlayer;
 import catan.player.SmartRandomPlayer;
@@ -16,23 +14,20 @@ public class App {
     }
 
     public static void main(String[] args) {
-        CatanBoard board = new CatanBoard();
-        board.populateBoard();
-
-        CatanPlayer randomPlayer = new SmartRandomPlayer();
-        board.placeStartingPositions(new CatanPlayer[]{randomPlayer,randomPlayer,randomPlayer,randomPlayer});
-        int currentPlayer = 0;
-        for(int i = 0; i < 1000; i++) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(200);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        for(int games = 0; games < 100; games++) {
+            CatanBoard board = new CatanBoard();
+            board.populateBoard();
+            CatanPlayer randomPlayer = new SmartRandomPlayer();
+            board.placeStartingPositions(new CatanPlayer[]{randomPlayer,randomPlayer,randomPlayer,randomPlayer});
+            int currentPlayer = 0;
+            for(int i = 0; i < 1000; i++) {
+                currentPlayer = board.takeTurn(currentPlayer, randomPlayer);
+                if(currentPlayer == -1) {
+                    board.displayBoard();
+                    break;
+                }
+                board.displayBoard();
             }
-            System.out.println("Turn " + i);
-            currentPlayer = board.takeTurn(currentPlayer, randomPlayer);
-            board.displayBoard();
         }
-        
-        board.printAvailableVerticesAndEdges();
     }
 }
