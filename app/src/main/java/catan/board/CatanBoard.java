@@ -1,5 +1,6 @@
 package catan.board;
 
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -274,12 +275,12 @@ public class CatanBoard {
         this.tiles[17].populateVerticesAndEdges(new Tile[] {tiles[14], null, null, null, tiles[16], tiles[13]}, this);
         this.tiles[18].populateVerticesAndEdges(new Tile[] {tiles[15], null, null, null, tiles[17], tiles[14]}, this);
     }
-    public int allocateNewVertex() {
+    private int allocateNewVertex() {
         int newVertex = this.vertexIndex;
         this.vertexIndex++;
         return newVertex;
     }    
-    public int allocateNewEdge() {
+    private int allocateNewEdge() {
         int newEdge = this.edgeIndex;
         this.edgeIndex++;
         return newEdge;
@@ -497,7 +498,7 @@ public class CatanBoard {
 
     public List<Integer> getPlayerRoads(int player) {
         List<Integer> roads = new ArrayList<Integer>();
-        for(int i = 0; i < 19; i++) {
+        for(int i = 0; i < 72; i++) {
             if(this.edges[i] == EdgeState.roadFromPlayer(player)) {
                 roads.add(i);
             }
@@ -527,7 +528,7 @@ public class CatanBoard {
 
     public void endGame(int player) {
         System.out.println("Player P" + (player + 1) + " wins!");
-        this.displayBoard();
+        this.displayBoard("endboard.txt");
         if(!checkRoadsHaveAdjacentRoadsOrSettlements()) {
             System.out.println("Roads do not have adjacent roads or settlements");
             System.exit(0);
@@ -676,7 +677,7 @@ public class CatanBoard {
                 this.developmentCardsInHand[catanPlayer][0]--;
                 break;
             case PLAY_ROAD_BUILDING:
-                System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0] + " and " + action.getArgs()[1]);
+                System.out.println("ROAD BUILDING: Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0] + " and " + action.getArgs()[1]);
                 if(this.edges[action.getArgs()[0]] != EdgeState.Empty || this.edges[action.getArgs()[1]] != EdgeState.Empty) {
                     throw new IllegalArgumentException("Roads must be empty to build");
                 }
@@ -836,6 +837,27 @@ public class CatanBoard {
 
     
 
+    public EdgeState getEdge(int edge) {
+        if(edge < 0 || edge > 71) {
+            throw new IllegalArgumentException("Edge must be between 0 and 71 inclusive");
+        }
+        return this.edges[edge];
+    }
+
+    public VertexState getVertex(int vertex) {
+        if(vertex < 0 || vertex > 53) {
+            throw new IllegalArgumentException("Vertex must be between 0 and 53 inclusive");
+        }
+        return this.vertices[vertex];
+    }
+
+    public Tile getTile(int tile) {
+        if(tile < 0 || tile > 18) {
+            throw new IllegalArgumentException("Tile must be between 0 and 18 inclusive");
+        }
+        return this.tiles[tile];
+    }
+    
     public boolean checkRoadHasAdjacentRoadsOrSettlements(int edge, int player) {
         for(int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[edge]) {
             if(adjacentEdge != -1 && (this.edges[adjacentEdge] == EdgeState.roadFromPlayer(player))) {
@@ -852,6 +874,7 @@ public class CatanBoard {
     public boolean checkRoadsHaveAdjacentRoadsOrSettlements() {
         for(int edge = 0; edge < 72; edge++) {
             if(this.edges[edge] != EdgeState.Empty && !checkRoadHasAdjacentRoadsOrSettlements(edge, this.edges[edge].getPlayer())) {
+                System.out.println("Edge " + edge + " does not have adjacent roads or settlements");
                 return false;
             }
         }
@@ -905,7 +928,7 @@ public class CatanBoard {
         }
     }
 
-    public void displayBoard() {
+    public void displayBoard(String filename) {
         String out = "         " + getVertexDisplay(0) + "     " + getVertexDisplay(6) + "     " + getVertexDisplay(10);
         out += "\n        " + displayEdge(5,"/") + " " + displayEdge(0,"\\") + "   " + displayEdge(10,"/") + " " + displayEdge(6,"\\") + "   " + displayEdge(15, "/") + " " + displayEdge(11,"\\");
         out += "\n       " + displayEdge(5,"/") + "   " + displayEdge(0,"\\") + " " + displayEdge(10,"/") + "   " + displayEdge(6,"\\") + " " + displayEdge(15, "/") + "   " + displayEdge(11,"\\");
@@ -1010,13 +1033,66 @@ public class CatanBoard {
             out += "\nLARGEST ARMY: " + playerNameColor + " with " + this.knightsPlayed[this.largestArmyPlayer] + " knights";
         }
         try {
-            FileWriter writer = new FileWriter("board.txt");
+            FileWriter writer = new FileWriter(filename);
             writer.write(out);
             writer.close();
         } catch (IOException e) {
             System.err.println("Error writing to file: " + e.getMessage());
         }
     }
+
+    
+
+    public void displayBoardIndexes(String filename) {
+        String out = "          X       X       X";
+        out += "\n        " + String.format("%2d", 5) + " " + String.format("%2d", 0) + "   " + String.format("%2d", 10) + " " + String.format("%2d", 6) + "   " + String.format("%2d", 15) + " " + String.format("%2d", 11);
+        out += "\n       " + String.format("%2d", 5) + "   " + String.format("%2d", 0) + " " + String.format("%2d", 10) + "   " + String.format("%2d", 6) + " " + String.format("%2d", 15) + "   " + String.format("%2d", 11);
+        out += "\n       X      X       X       X";
+        out += "\n      " + String.format("%2d", 4) + "      " + String.format("%2d", 1) + "      " + String.format("%2d", 7) + "      " + String.format("%2d", 12);
+        out += "\n      " + String.format("%2d", 4) + "      " + String.format("%2d", 1) + "      " + String.format("%2d", 7) + "      " + String.format("%2d", 12);
+        out += "\n       X       X       X       X";
+        out += "\n     " + String.format("%2d", 20) + " " + String.format("%2d", 3) + "   " + String.format("%2d", 2) + " " + String.format("%2d", 9) + "   " + String.format("%2d", 8) + " " + String.format("%2d", 14) + "   " + String.format("%2d", 13) + " " + String.format("%2d", 27);
+        out += "\n    " + String.format("%2d", 20) + "   " + String.format("%2d", 3) + " " + String.format("%2d", 2) + "   " + String.format("%2d", 9) + " " + String.format("%2d", 8) + "   " + String.format("%2d", 14) + " " + String.format("%2d", 13) + "   " + String.format("%2d", 27);
+        
+        out += "\n    X       X       X       X       X";
+        out += "\n   " + String.format("%2d", 19) + "      " + String.format("%2d", 16) + "      " + String.format("%2d", 21) + "      " + String.format("%2d", 24) + "      " + String.format("%2d", 28);
+        out += "\n   " + String.format("%2d", 19) + "      " + String.format("%2d", 16) + "      " + String.format("%2d", 21) + "      " + String.format("%2d", 24) + "      " + String.format("%2d", 28);
+        
+        out += "\n    X       X       X       X       X";
+        out += "\n  " + String.format("%2d", 35) + " " + String.format("%2d", 18) + "   " + String.format("%2d", 17) + " " + String.format("%2d", 23) + "   " + String.format("%2d", 22) + " " + String.format("%2d", 26) + "   " + String.format("%2d", 25) + " " + String.format("%2d", 30) + "   " + String.format("%2d", 29) + " " + String.format("%2d", 45);
+        out += "\n " + String.format("%2d", 35) + "   " + String.format("%2d", 18) + " " + String.format("%2d", 17) + "   " + String.format("%2d", 23) + " " + String.format("%2d", 22) + "   " + String.format("%2d", 26) + " " + String.format("%2d", 25) + "   " + String.format("%2d", 30) + " " + String.format("%2d", 29) + "   " + String.format("%2d", 45);
+
+        out += "\nX       X       X       X       X       X";
+        out += "\n" + String.format("%2d", 34) + "      " + String.format("%2d", 31) + "      " + String.format("%2d", 36) + "      " + String.format("%2d", 39) + "      " + String.format("%2d", 42) + "      " + String.format("%2d", 46);
+        out += "\n" + String.format("%2d", 34) + "      " + String.format("%2d", 31) + "      " + String.format("%2d", 36) + "      " + String.format("%2d", 39) + "      " + String.format("%2d", 42) + "      " + String.format("%2d", 46);
+        out += "\nX       X       X       X       X       X";
+        out += "\n " + String.format("%2d", 33) + "   " + String.format("%2d", 32) + " " + String.format("%2d", 38) + "   " + String.format("%2d", 37) + " " + String.format("%2d", 41) + "   " + String.format("%2d", 40) + " " + String.format("%2d", 44) + "   " + String.format("%2d", 43) + " " + String.format("%2d", 48) + "   " + String.format("%2d", 47);
+        out += "\n  " + String.format("%2d", 33) + " " + String.format("%2d", 32) + "   " + String.format("%2d", 38) + " " + String.format("%2d", 37) + "   " + String.format("%2d", 41) + " " + String.format("%2d", 40) + "   " + String.format("%2d", 44) + " " + String.format("%2d", 43) + "   " + String.format("%2d", 48) + " " + String.format("%2d", 47);
+        
+        out += "\n    X       X       X       X       X";
+        out += "\n   " + String.format("%2d", 52) + "      " + String.format("%2d", 49) + "      " + String.format("%2d", 53) + "      " + String.format("%2d", 56) + "      " + String.format("%2d", 59);
+        out += "\n   " + String.format("%2d", 52) + "      " + String.format("%2d", 49) + "      " + String.format("%2d", 53) + "      " + String.format("%2d", 56) + "      " + String.format("%2d", 59);
+        out += "\n    X      X       X       X       X";
+        
+        out += "\n    " + String.format("%2d", 51) + "   " + String.format("%2d", 50) + " " + String.format("%2d", 55) + "   " + String.format("%2d", 54) + " " + String.format("%2d", 58) + "   " + String.format("%2d", 57) + " " + String.format("%2d", 61) + "   " + String.format("%2d", 60);
+        out += "\n     " + String.format("%2d", 51) + " " + String.format("%2d", 50) + "   " + String.format("%2d", 55) + " " + String.format("%2d", 54) + "   " + String.format("%2d", 58) + " " + String.format("%2d", 57) + "   " + String.format("%2d", 61) + " " + String.format("%2d", 60);
+        out += "\n      X        X       X       X";
+        out += "\n      " + String.format("%2d", 65) + "      " + String.format("%2d", 62) + "      " + String.format("%2d", 66) + "      " + String.format("%2d", 69);
+        out += "\n      " + String.format("%2d", 65) + "      " + String.format("%2d", 62) + "      " + String.format("%2d", 66) + "      " + String.format("%2d", 69);
+        out += "\n       X      X       X       X";
+        out += "\n       " + String.format("%2d", 64) + "   " + String.format("%2d", 63) + " " + String.format("%2d", 68) + "   " + String.format("%2d", 67) + " " + String.format("%2d", 71) + "   " + String.format("%2d", 70);
+        out += "\n        " + String.format("%2d", 64) + " " + String.format("%2d", 63) + "   " + String.format("%2d", 68) + " " + String.format("%2d", 67) + "   " + String.format("%2d", 71) + " " + String.format("%2d", 70);
+        out += "\n          X       X       X";
+        
+        try {
+            FileWriter writer = new FileWriter(filename);
+            writer.write(out);
+            writer.close();
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
     public void printAdjacentTilesAndEdges() {
         for(int i = 0; i < 54; i++) {
             for(int j = 0; j < 19; j++) {

@@ -14,19 +14,21 @@ public class App {
     }
 
     public static void main(String[] args) {
-        for(int games = 0; games < 100; games++) {
+        for(int games = 0; games < 1; games++) {
             CatanBoard board = new CatanBoard();
             board.populateBoard();
             CatanPlayer randomPlayer = new SmartRandomPlayer();
             board.placeStartingPositions(new CatanPlayer[]{randomPlayer,randomPlayer,randomPlayer,randomPlayer});
+            board.displayBoard("startboard.txt");
+            board.displayBoardIndexes("boardindexes.txt");
             int currentPlayer = 0;
             for(int i = 0; i < 1000; i++) {
                 currentPlayer = board.takeTurn(currentPlayer, randomPlayer);
                 if(currentPlayer == -1) {
-                    board.displayBoard();
+                    board.displayBoard("endboard.txt");
                     break;
                 }
-                board.displayBoard();
+                board.displayBoard("board.txt");
             }
         }
     }

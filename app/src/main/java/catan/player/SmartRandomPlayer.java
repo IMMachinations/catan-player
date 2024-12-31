@@ -52,7 +52,7 @@ public class SmartRandomPlayer extends CatanPlayer {
 
     @Override
     public Action chooseAction(CatanBoard board, List<Action> possibleActions) {
-        if(possibleActions.get(possibleActions.size() - 1).getType() == Action.ActionType.BUILD_SETTLEMENT) {
+        if(possibleActions.get(possibleActions.size() - 1).getType() == Action.ActionType.BUILD_SETTLEMENT_START) {
             return chooseStartingSettlement(board, possibleActions);
         }
         return possibleActions.get(rand.nextInt(possibleActions.size()));
@@ -78,7 +78,6 @@ public class SmartRandomPlayer extends CatanPlayer {
                 hand[order[i]] -= count;
             }
         }
-        System.out.println("Discarded: " + Arrays.toString(discarded));
         return discarded;
     }
 }
