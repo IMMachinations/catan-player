@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Arrays;
 
 
-import catan.board.CatanBoard;
+import catan.board.PublicBoard;
 import catan.events.Action;
 import catan.utils.AdjacentDicts;
 
@@ -19,7 +19,7 @@ public class RandomPlayer extends CatanPlayer {
     }
 
     @Override
-    public int[] getStartingPosition(CatanBoard board) {
+    public int[] getStartingPosition(PublicBoard board) {
         int[] validVertices = new int[54];
         int validVerticesCount = 0;
         for(int i = 0; i < 54; i++) {
@@ -64,12 +64,12 @@ public class RandomPlayer extends CatanPlayer {
     }
 
     @Override
-    public Action chooseAction(CatanBoard board, List<Action> possibleActions) {
+    public Action chooseAction(PublicBoard board, List<Action> possibleActions) {
         return possibleActions.get(rand.nextInt(possibleActions.size()));
     }
 
     @Override
-    public int[] discardHalfOfHand(CatanBoard board, int[] hand, int numToDiscard) {
+    public int[] discardHalfOfHand(PublicBoard board, int[] hand, int numToDiscard) {
         int[] discarded = new int[5];
         int[] order = new int[] {0,1,2,3,4};
         Collections.shuffle(Arrays.asList(order));
@@ -84,5 +84,24 @@ public class RandomPlayer extends CatanPlayer {
         }
 
         return discarded;
+    }
+
+    @Override
+    public Action respondToTrade(PublicBoard board, Action trade) {
+        int[] getHand = board.getHand();
+        int[] proposed_trade = trade.getArgs();
+        boolean canAccept = true;
+        for(int i = 0; i < 5; i++) {
+            if(getHand[i] < proposed_trade[i]) {
+                canAccept = false;
+            }
+        }
+        if(canAccept) {
+            int[] response = new int[] {proposed_trade[0], proposed_trade[1], proposed_trade[2], proposed_trade[3], proposed_trade[4], board.getPlayerId()};
+            if(rand.nextBoolean()) {
+                return new Action(Action.ActionType.RESPOND_TO_PLAYER_TRADE, response);
+            }
+        }
+        return new Action(Action.ActionType.REJECT_PLAYER_TRADE, new int[] {});
     }
 }

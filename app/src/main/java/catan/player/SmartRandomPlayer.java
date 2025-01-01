@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import catan.board.CatanBoard;
+import catan.board.PublicBoard;
 import catan.events.Action;
 import catan.utils.AdjacentDicts;
 
@@ -17,7 +17,7 @@ public class SmartRandomPlayer extends CatanPlayer {
     }
 
     @Override
-    public int[] getStartingPosition(CatanBoard board) {
+    public int[] getStartingPosition(PublicBoard board) {
         int[] validVertices = new int[54];
         int validVerticesCount = 0;
         for(int i = 0; i < 54; i++) {
@@ -37,7 +37,7 @@ public class SmartRandomPlayer extends CatanPlayer {
         return new int[] {vertex, edge};
     }
 
-    private Action chooseStartingSettlement(CatanBoard board, List<Action> possibleActions) {
+    private Action chooseStartingSettlement(PublicBoard board, List<Action> possibleActions) {
         
         while(possibleActions.size() > 1) {
             Collections.shuffle(possibleActions, rand);
@@ -51,7 +51,7 @@ public class SmartRandomPlayer extends CatanPlayer {
     }
 
     @Override
-    public Action chooseAction(CatanBoard board, List<Action> possibleActions) {
+    public Action chooseAction(PublicBoard board, List<Action> possibleActions) {
         if(possibleActions.get(possibleActions.size() - 1).getType() == Action.ActionType.BUILD_SETTLEMENT_START) {
             return chooseStartingSettlement(board, possibleActions);
         }
@@ -59,7 +59,7 @@ public class SmartRandomPlayer extends CatanPlayer {
     }
 
     @Override
-    public int[] discardHalfOfHand(CatanBoard board, int[] hand, int numToDiscard) {
+    public int[] discardHalfOfHand(PublicBoard board, int[] hand, int numToDiscard) {
         int[] discarded = new int[5];
         Integer[] order = new Integer[] {0,1,2,3,4};
         Collections.shuffle(Arrays.asList(order));
@@ -80,4 +80,24 @@ public class SmartRandomPlayer extends CatanPlayer {
         }
         return discarded;
     }
+
+    @Override
+    public Action respondToTrade(PublicBoard board, Action trade) {
+        int[] getHand = board.getHand();
+        int[] proposed_trade = trade.getArgs();
+        boolean canAccept = true;
+        for(int i = 0; i < 5; i++) {
+            if(getHand[i] < proposed_trade[i]) {
+                canAccept = false;
+            }
+        }
+        if(canAccept) {
+            int[] response = new int[] {proposed_trade[0], proposed_trade[1], proposed_trade[2], proposed_trade[3], proposed_trade[4], board.getPlayerId()};
+            if(rand.nextBoolean()) {
+                return new Action(Action.ActionType.RESPOND_TO_PLAYER_TRADE, response);
+            }
+        }
+        return new Action(Action.ActionType.REJECT_PLAYER_TRADE, new int[] {});
+    }
+
 }

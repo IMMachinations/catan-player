@@ -45,7 +45,9 @@ public class CatanBoard {
     private int[][] playerHands;          // [player][resource]
     private int[] resourceCounts;         // Bank's resource counts
     private int[][] bankTradesOffered;    // [player][resource]
-    
+    private int[] twoForOnePorts; 
+    private int[] threeForOnePorts; 
+
     // Development cards
     private int[][] developmentCardsInHand;    // [player][cardType]
     private Queue<Integer> developmentCardsInDeck;
@@ -86,6 +88,31 @@ public class CatanBoard {
             this.openVertices.add(i);
             this.settlableVertices.add(i);
             this.cityableVertices.add(i);
+        }
+
+        this.twoForOnePorts = new int[10];
+        this.threeForOnePorts = new int[8];
+
+        ArrayList<Integer[]> ports = new ArrayList<Integer[]>(Arrays.asList(
+            new Integer[] {0,5},
+            new Integer[] {6,7},
+            new Integer[] {12,22},
+            new Integer[] {35,36},
+            new Integer[] {45,46},
+            new Integer[] {50,51},
+            new Integer[] {48,49},
+            new Integer[] {26,40},
+            new Integer[] {16,17}
+        ));
+
+        Collections.shuffle(ports);
+        for(int i = 0; i < 5; i++) {
+            this.twoForOnePorts[2*i] = ports.get(i)[1];
+            this.twoForOnePorts[2*i + 1] = ports.get(i)[0];
+        }
+        for(int i = 0; i < 4; i++) {
+            this.threeForOnePorts[2*i] = ports.get(i + 5)[1];
+            this.threeForOnePorts[2*i + 1] = ports.get(i + 5)[0];
         }
 
         this.openEdges = new HashSet<>();
@@ -275,12 +302,12 @@ public class CatanBoard {
         this.tiles[17].populateVerticesAndEdges(new Tile[] {tiles[14], null, null, null, tiles[16], tiles[13]}, this);
         this.tiles[18].populateVerticesAndEdges(new Tile[] {tiles[15], null, null, null, tiles[17], tiles[14]}, this);
     }
-    private int allocateNewVertex() {
+    public int allocateNewVertex() {
         int newVertex = this.vertexIndex;
         this.vertexIndex++;
         return newVertex;
     }    
-    private int allocateNewEdge() {
+    public int allocateNewEdge() {
         int newEdge = this.edgeIndex;
         this.edgeIndex++;
         return newEdge;
@@ -358,6 +385,24 @@ public class CatanBoard {
         this.playerHands[givePlayer][Resource.toInt(resource)] -= amount;
         this.playerHands[receivePlayer][Resource.toInt(resource)] += amount;
     }
+
+    public void updateTradesFromPort(int player, int vertex) {
+        for(int i = 0; i < 10; i++) {
+            if(this.twoForOnePorts[i] == vertex) {
+                this.bankTradesOffered[player][i / 2] = 2;
+            }
+        }
+        for(int i = 0; i < 8; i++) {
+            if(this.threeForOnePorts[i] == vertex) {
+                for(int j = 0; j < 5; j++) {
+                    if(this.bankTradesOffered[player][j] == 4) {
+                        this.bankTradesOffered[player][j] = 3;
+                    }
+                }
+            }
+        }
+    }
+
     public Odds rollDice(int playerIndex) {
         int roll1 = rand.nextInt(6);
         int roll2 = rand.nextInt(6);
@@ -370,7 +415,7 @@ public class CatanBoard {
                     sum += this.playerHands[i][j];
                 }
                 if(sum >= 7) {
-                    int[] discarded = this.players[i].discardHalfOfHand(this, Arrays.copyOf(this.playerHands[i], 5), (sum + 1) / 2);
+                    int[] discarded = this.players[i].discardHalfOfHand(new PublicBoard(this, i), Arrays.copyOf(this.playerHands[i], 5), (sum + 1) / 2);
                     int count = 0;
                     for(int j = 0; j < 5; j++) {
                         count += discarded[j];
@@ -393,7 +438,7 @@ public class CatanBoard {
                     actions.add(new Action(Action.ActionType.MOVE_ROBBER, new int[] {i}));
                 }
             }
-            Action chosen = this.players[playerIndex].chooseAction(this, actions);
+            Action chosen = this.players[playerIndex].chooseAction(new PublicBoard(this,playerIndex), actions);
             executeAction(chosen, playerIndex);
 
             return roll;
@@ -423,7 +468,7 @@ public class CatanBoard {
         Action chosenAction;
         do {
             List<Action> actions = getValidActions(catanPlayer);
-            chosenAction = player.chooseAction(this, actions);
+            chosenAction = player.chooseAction(new PublicBoard(this, catanPlayer), actions);
             if(executeAction(chosenAction, catanPlayer)) {
                 return -1;
             }
@@ -536,6 +581,7 @@ public class CatanBoard {
     }
 
     public boolean executeAction(Action action, int catanPlayer) {
+        Action chosen;
         switch(action.getType()) {
             case BUILD_ROAD:
                 System.out.println("Player P" + (catanPlayer + 1) + " Building road at edge " + action.getArgs()[0]);
@@ -573,7 +619,7 @@ public class CatanBoard {
                 payResourceToBank(catanPlayer, Resource.WOOD, 1);
                 payResourceToBank(catanPlayer, Resource.WHEAT, 1);
                 payResourceToBank(catanPlayer, Resource.SHEEP, 1);
-                
+                updateTradesFromPort(catanPlayer, action.getArgs()[0]);
                 return giveScore(catanPlayer, 1);
                   
             case BUILD_CITY:
@@ -591,6 +637,57 @@ public class CatanBoard {
                 payResourceToBank(catanPlayer, Resource.values()[giveResource], amount);
                 giveResource(catanPlayer, Resource.values()[receiveResource], 1);
                 System.out.println("Player P" + (catanPlayer + 1) + " Trading with bank " + amount + " " + Resource.values()[giveResource] + " for " + 1 + " " + Resource.values()[receiveResource]);
+                return false;
+            case PROPOSE_PLAYER_TRADE:
+                System.out.println("Player P" + (catanPlayer + 1) + " Proposing trade with " + (action.getArgs()));
+                for(int i = 0; i < 5; i++) {
+                    if(action.getArgs()[i] * -1 > this.playerHands[catanPlayer][i]) {
+                        throw new IllegalArgumentException("Not enough resources to trade");
+                    }
+                }
+                Action[] responses = new Action[4];
+                List<Action> validResponses = new ArrayList<Action>();
+                validResponses.add(new Action(Action.ActionType.REJECT_PLAYER_TRADE, new int[] {}));
+                for(int i = 0; i < 4; i++) {
+                    if(i != catanPlayer) {
+                        responses[i] = this.players[i].respondToTrade(new PublicBoard(this, i), action);
+                        if(responses[i].getType() != Action.ActionType.RESPOND_TO_PLAYER_TRADE && responses[i].getType() != Action.ActionType.REJECT_PLAYER_TRADE) {
+                            throw new IllegalArgumentException("Invalid response to trade");
+                        }
+                        if(responses[i].getType() == Action.ActionType.RESPOND_TO_PLAYER_TRADE) {
+                            boolean valid = true;
+                            for(int j = 0; j < 5; j++) {
+                                if(responses[i].getArgs()[j] * -1 > this.playerHands[i][j]) {
+                                    valid = false;
+                                }
+                                if(responses[i].getArgs()[j] > this.playerHands[i][j]) {
+                                    valid = false;
+                                }
+                            }
+                            if(responses[i].getArgs()[5] != i) {
+                                valid = false;
+                            }
+                            if(valid) {
+                                validResponses.add(responses[i]);
+                            }
+                        }
+                    }
+                }
+                chosen = this.players[catanPlayer].chooseAction(new PublicBoard(this, catanPlayer), Arrays.asList(responses));
+                if(chosen.getType() == Action.ActionType.REJECT_PLAYER_TRADE) {
+                    return false;
+                }
+                if(chosen.getType() == Action.ActionType.RESPOND_TO_PLAYER_TRADE) {
+                    for(int i = 0; i < 5; i++) {
+                        if(chosen.getArgs()[i] > 0) {
+                            moveResourceFromPlayerToPlayer(catanPlayer, chosen.getArgs()[5], chosen.getArgs()[i], Resource.values()[i]);
+                        }
+                        if(chosen.getArgs()[i] < 0) {
+                            moveResourceFromPlayerToPlayer(chosen.getArgs()[5], catanPlayer, chosen.getArgs()[i] * -1, Resource.values()[i]);
+                        }
+                    }
+                }
+
                 return false;
             case PURCHASE_DEVELOPMENT_CARD:
                 System.out.println("Player P" + (catanPlayer + 1) + " Buying development card");
@@ -621,7 +718,7 @@ public class CatanBoard {
                         }
                     }
                     if(!stealActions.isEmpty()) {
-                        Action chosen = this.players[catanPlayer].chooseAction(this, stealActions);
+                        chosen = this.players[catanPlayer].chooseAction(new PublicBoard(this, catanPlayer), stealActions);
                         return executeAction(chosen, catanPlayer);
                     }
                 }
@@ -670,7 +767,7 @@ public class CatanBoard {
                         }
                     }
                     if(!knightStealActions.isEmpty()) {
-                        Action chosen = this.players[catanPlayer].chooseAction(this, knightStealActions);
+                        chosen = this.players[catanPlayer].chooseAction(new PublicBoard(this, catanPlayer), knightStealActions);
                         executeAction(chosen, catanPlayer);
                     }
                 }
@@ -755,7 +852,7 @@ public class CatanBoard {
         for(int i = 0; i < 4; i++) {
             System.out.println("Player P" + (i + 1) + " placing first starting position");
             List<Action> validActions = getValidStartingPositions();
-            Action chosen = players[i].chooseAction(this, validActions);
+            Action chosen = players[i].chooseAction(new PublicBoard(this, i), validActions);
             
             if(chosen.getType() != Action.ActionType.BUILD_SETTLEMENT_START) {    
                 throw new IllegalArgumentException("Invalid starting position action");
@@ -772,7 +869,7 @@ public class CatanBoard {
                     validActions.add(new Action(Action.ActionType.BUILD_ROAD, new int[]{edge}));
                 }
             }
-            chosen = players[i].chooseAction(this, validActions);
+            chosen = players[i].chooseAction(new PublicBoard(this, i), validActions);
             if(chosen.getType() != Action.ActionType.BUILD_ROAD) {
                 throw new IllegalArgumentException("Invalid starting position action");
             }
@@ -787,7 +884,7 @@ public class CatanBoard {
         for(int i = 3; i >= 0; i--) {
             System.out.println("Player P" + (i + 1) + " placing second starting position");
             List<Action> validActions = getValidStartingPositions();
-            Action chosen = players[i].chooseAction(this, validActions);
+            Action chosen = players[i].chooseAction(new PublicBoard(this, i), validActions);
             
             if(chosen.getType() != Action.ActionType.BUILD_SETTLEMENT_START) {    
                 throw new IllegalArgumentException("Invalid starting position action");
@@ -811,7 +908,7 @@ public class CatanBoard {
                     validActions.add(new Action(Action.ActionType.BUILD_ROAD, new int[]{edge}));
                 }
             }
-            chosen = players[i].chooseAction(this, validActions);
+            chosen = players[i].chooseAction(new PublicBoard(this, i), validActions);
             if(chosen.getType() != Action.ActionType.BUILD_ROAD) {
                 throw new IllegalArgumentException("Invalid starting position action");
             }
@@ -857,7 +954,7 @@ public class CatanBoard {
         }
         return this.tiles[tile];
     }
-    
+
     public boolean checkRoadHasAdjacentRoadsOrSettlements(int edge, int player) {
         for(int adjacentEdge : AdjacentDicts.edgeAdjacentEdges[edge]) {
             if(adjacentEdge != -1 && (this.edges[adjacentEdge] == EdgeState.roadFromPlayer(player))) {
@@ -1109,5 +1206,12 @@ public class CatanBoard {
         System.out.println("Available Vertices: " + this.settlableVertices);
         System.out.println("Available Edges: " + this.openEdges);
     }   
+
+    public int[] getPlayerHand(int player) {
+        if(player < 0 || player > 3) {
+            throw new IllegalArgumentException("Player must be between 0 and 3 inclusive");
+        }
+        return this.playerHands[player];
+    }
 
 }

@@ -7,6 +7,9 @@ public class Action {
         BUILD_SETTLEMENT_START,
         BUILD_CITY,
         TRADE_WITH_BANK,
+        PROPOSE_PLAYER_TRADE,
+        REJECT_PLAYER_TRADE,
+        RESPOND_TO_PLAYER_TRADE,
         TRADE_WITH_PLAYER,
         PURCHASE_DEVELOPMENT_CARD,
         MOVE_ROBBER,
@@ -15,6 +18,7 @@ public class Action {
         PLAY_MONOPOLY,
         PLAY_YEAR_OF_PLENTY,
         PLAY_ROAD_BUILDING,
+
         PASS
     }
 
@@ -61,6 +65,40 @@ public class Action {
                 }
                 if(args[2] < 0 || args[2] > 4) {
                     throw new IllegalArgumentException("TRADE_WITH_BANK action requires a valid take resource argument");
+                }
+                break;
+            case PROPOSE_PLAYER_TRADE:
+                if(args.length != 5) {
+                    throw new IllegalArgumentException("PROPOSE_PLAYER_TRADE action requires 5 arguments: one for each resource");
+                }
+                boolean hasGive = false;
+                boolean hasTake = false;
+                for(int i = 0; i < 5; i++) {
+                    if(args[i] < 0) {
+                        hasGive = true;
+                    } else if(args[i] > 0) {
+                        hasTake = true;
+                    }
+                }
+                if(!hasGive || !hasTake) {
+                    throw new IllegalArgumentException("PROPOSE_PLAYER_TRADE action requires at least one given and one taken resource");
+                }
+                break;
+            case RESPOND_TO_PLAYER_TRADE:
+                if(args.length != 6) {
+                    throw new IllegalArgumentException("RESPOND_TO_PLAYER_TRADE action requires 6 arguments: one for each resource and one for the player");
+                }
+                boolean hasGiven = false;
+                boolean hasTaken = false;
+                for(int i = 0; i < 5; i++) {
+                    if(args[i] < 0) {
+                        hasGiven = true;
+                    } else if(args[i] > 0) {
+                        hasTaken = true;
+                    }
+                }
+                if(!hasGiven || !hasTaken) {
+                    throw new IllegalArgumentException("RESPOND_TO_PLAYER_TRADE action requires at least one given and one taken resource");
                 }
                 break;
             case PURCHASE_DEVELOPMENT_CARD:
@@ -114,6 +152,7 @@ public class Action {
                     throw new IllegalArgumentException("STEAL_RESOURCE action requires a valid player argument");
                 }
                 break;
+            
         }
         this.type = type;
         this.args = args;
