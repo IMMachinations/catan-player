@@ -515,18 +515,18 @@ public class CatanBoard {
         List<Integer> roads = getPlayerRoads(player);
         int maxLength = 0;
         for(int road : roads) {
-            Set<Integer> initialSet = new HashSet<>();  // Create empty set
-            initialSet.add(road);                       // Add the initial road
-            maxLength = Math.max(maxLength, getRoadChainLength(road, EdgeState.roadFromPlayer(player), initialSet, new HashSet<>()));
+            List<Integer> initialList = new ArrayList<>();  // Create empty set
+            initialList.add(road);                       // Add the initial road
+            maxLength = Math.max(maxLength, getRoadChainLength(road, EdgeState.roadFromPlayer(player), initialList, new HashSet<>()));
         }
         return maxLength;
     }
 
-    public int getRoadChainLength(int currentRoad, EdgeState playerRoad, Set<Integer> visited, Set<Integer> backtracked) {
+    public int getRoadChainLength(int currentRoad, EdgeState playerRoad, List<Integer> visited, Set<Integer> backtracked) {
         int maxLength = visited.size();
         for(int edge : AdjacentDicts.edgeAdjacentEdges[currentRoad]) {
             if(edge != -1 && this.edges[edge] == playerRoad && !visited.contains(edge) && !backtracked.contains(edge)) {
-                Set<Integer> newVisited = new HashSet<>(visited);
+                List<Integer> newVisited = new ArrayList<>(visited);
                 newVisited.add(edge);
                 Set<Integer> newBacktracked = new HashSet<>();
                 for(int otherEdge : AdjacentDicts.edgeAdjacentEdges[currentRoad]) {
@@ -535,6 +535,8 @@ public class CatanBoard {
                     }
                 }
                 maxLength = Math.max(maxLength, getRoadChainLength(edge, playerRoad, newVisited, newBacktracked));
+                //System.out.println(maxLength);
+                //System.out.println(newVisited);
             }
         }
         return maxLength;

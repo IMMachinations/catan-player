@@ -4,7 +4,7 @@ import catan.enums.Odds;
 import catan.enums.Resource;
 import catan.utils.VertexDirection;
 
-class Tile {
+public class Tile {
     private Resource resource;
     private Odds odds;
     private int[] vertices;
