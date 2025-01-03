@@ -1,0 +1,54 @@
+Catan RL Player
+
+Goal: Perform iterated distillation and amplification on a Neural Network.
+
+Model: Undecided
+    Potential Notes:
+    I'm considering using seperate models for different tasks, notably for Normal Actions, Player-Player Trades, 
+        Initial Settlements, and Discarding.
+    What should the inputs and outputs look like? Since we already have possible actions delivered to the player,
+        we could make the inputs known information about the game state and possible actions, and the output could be a 
+        probability distribution over the possible actions.
+        This would require variable input and output length, so we would need an appropriate model.
+        Alternatively, we could use a sequence model on game actions, with unique tokens for each action.
+        One benefit of this is that we could let the model learn to predict opponents hands on their own, instead of implementing
+            external logic for hand estimation. 
+        The corresponding downside, however, is that we would need to train the model for much longer, since it would
+            need to learn possible actions AND optimal actions, as opposed to just learning optimal actions. Further, the model would need
+            to generate an abstraction of the board state for every token position. 
+        The sequence modeler is probably unoptimal for this task, but maybe I'll try exploring it after working with the action-chooser.
+    So, we want to choose a model that accepts the board state, as well as a variable number of actions. 
+    I want to try a variation of the transformer model. Instead of having decoder layers, we have a layer of heads 
+    with no masking on the entire sequence, and a second layer of heads only on the Action tokens. 
+
+    How will we represent the board state?
+        Each road, city, and settlement for each player will have a unique token. 
+        Each resource will have a unique token.
+        Each odds rolled will have a unique token.
+        Each edge, vertex, tile resource, and tile odds will have a specified position.
+        Not sure how to represent port and robber. Perhaps each vertex will have a unique token, the ports will have 18 positions.
+        The robber will have one position, and there will be a unique token for each tile location. 
+        There will be a token position for active player. 
+    How will we represent the actions?
+        Each action type will have a unique token.
+        Action variables will be represented as positional tokens after the action type token. 
+        These tokens could be the edge/vertex tokens from before, or they could be resource tokens for year of plenty/monopoly.
+    We could also use this to do robber and discard actions. 
+    Discard actions are trickier only because of the number of possible discard combinations.
+
+Optimization Procedure: Undecided
+    Start by doing random actions, and saving the most recent ~4-8 turns. 
+    Perform monte carlo rollouts on the saved states, equally weighting each action. 
+    Measure the average rollout performance of each action. 
+    Train the model as a classifier on the rollout results
+    Repeat k times to quickstart the model.
+    
+    Now do MCTS, saving each action and the valuations of the following actions.
+    
+    Once the model has reached a reasonable level of performance, we use it to train the initial settlement model.
+    We do a bunch of runouts for possible placements, and then have the agents play against each other, and 
+    use those results to train the initial settlement model. 
+
+
+
+Loss Function: Undecided
